@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>On Par Entertainment Events Roadmap</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div>
+      <p class="eyebrow">On Par Entertainment</p>
+      <h1>90-Day Marketing Events Roadmap</h1>
+      <p class="subhead" id="dateRange">Loading roadmap...</p>
+    </div>
+    <div class="actions" aria-label="Roadmap actions">
+      <button type="button" class="icon-button" id="printButton" title="Print calendar" aria-label="Print calendar">Print</button>
+      <button type="button" class="icon-button" id="editButton" title="Edit roadmap" aria-label="Edit roadmap">Edit</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="filters" aria-label="Calendar filters">
+      <label><input type="checkbox" data-filter="trivia" checked> Trivia</label>
+      <label><input type="checkbox" data-filter="bingo" checked> Bingo</label>
+      <label><input type="checkbox" data-filter="confirmed" checked> Confirmed</label>
+      <label><input type="checkbox" data-filter="paid" checked> Paid</label>
+      <label><input type="checkbox" data-filter="marketing" checked> Marketing</label>
+    </section>
+
+    <section class="summary" id="summary" aria-label="Roadmap summary"></section>
+
+    <section class="layout">
+      <div id="calendar" aria-label="Calendar"></div>
+
+      <aside class="sidebar">
+        <section class="panel">
+          <h2>Monthly Revenue Beats</h2>
+          <div id="revenueBeats"></div>
+        </section>
+
+        <section class="panel">
+          <h2>Operating Notes</h2>
+          <ul id="operatingNotes"></ul>
+        </section>
+
+        <section class="panel sources">
+          <h2>Sources</h2>
+          <div id="sources"></div>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <dialog id="editorDialog">
+    <form method="dialog" class="editor">
+      <div class="editor-head">
+        <div>
+          <p class="eyebrow">Calendar Data</p>
+          <h2>Edit Roadmap</h2>
+        </div>
+        <button type="submit" class="icon-button" aria-label="Close editor">Close</button>
+      </div>
+
+      <div class="editor-tools">
+        <button type="button" id="addEventButton">Add Event</button>
+        <button type="button" id="saveDraftButton">Save Draft</button>
+        <button type="button" id="exportButton">Export JSON</button>
+        <label class="file-button">
+          Import JSON
+          <input type="file" id="importInput" accept="application/json">
+        </label>
+        <button type="button" id="resetDraftButton">Reset Draft</button>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Title</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Detail</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="editorRows"></tbody>
+        </table>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="src/app.js" type="module"></script>
+</body>
+</html>

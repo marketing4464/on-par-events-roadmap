@@ -1,0 +1,9 @@
+{
+  "name": "on-par-events-roadmap-site",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npx serve .",
+    "check": "node --check src/app.js"
+  }
+}
