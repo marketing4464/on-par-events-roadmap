@@ -230,10 +230,29 @@ export type YearlyMarketingMonth = {
   sources: MarketingPlanSource[];
 };
 
+export type EventIdea = {
+  id: string;
+  title: string;
+  category: EventCategory;
+  concept: string;
+  whyItFits: string;
+  bestMonths: string[];
+  bestDays: string[];
+  suggestedTime: string;
+  estimatedTicketPrice: number;
+  estimatedAttendance: number;
+  intendedAudience: string;
+  foodDrinkAngle: string;
+  marketingHook: string;
+  trendBasis: string;
+  sourceLinks: MarketingPlanSource[];
+};
+
 export type DashboardState = {
   events: RoadmapEvent[];
   recommendations: EventRecommendation[];
   templates: EventTemplate[];
   researchRuns: ResearchRun[];
   yearlyPlan: YearlyMarketingMonth[];
+  ideas: EventIdea[];
 };

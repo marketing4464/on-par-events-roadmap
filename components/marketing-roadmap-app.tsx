@@ -42,6 +42,7 @@ import {
 } from "@/lib/roadmap";
 import type {
   DashboardState,
+  EventIdea,
   EventCategory,
   EventRecommendation,
   EventStatus,
@@ -87,6 +88,7 @@ type ActivePage =
   | "Master Calendar"
   | "Annual Roadmap"
   | "Yearly Marketing Plan"
+  | "Ideas"
   | "Recommendation Inbox"
   | "Event Research"
   | "Event Reports"
@@ -103,6 +105,7 @@ const navItems: Array<{ label: ActivePage; icon: React.ElementType }> = [
   { label: "Master Calendar", icon: CalendarDays },
   { label: "Annual Roadmap", icon: CalendarDays },
   { label: "Yearly Marketing Plan", icon: Filter },
+  { label: "Ideas", icon: Plus },
   { label: "Recommendation Inbox", icon: Inbox },
   { label: "Event Research", icon: Search },
   { label: "Event Reports", icon: FileText },
@@ -162,6 +165,7 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
   const [manualError, setManualError] = useState("");
   const [calendarEventDate, setCalendarEventDate] = useState<string | null>(null);
   const [calendarEventError, setCalendarEventError] = useState("");
+  const [ideaToSchedule, setIdeaToSchedule] = useState<EventIdea | null>(null);
 
   const selectedEvent = state.events.find((event) => event.id === selectedEventId) ?? state.events[0];
 
@@ -270,6 +274,30 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
     setCalendarEventError("");
     setSelectedEventId(newEvent.id);
     setActivePage("Event Reports");
+  }
+
+  function handleIdeaScheduleSubmit(formData: FormData) {
+    const parsed = manualCalendarEventSchema.safeParse({
+      name: formData.get("name"),
+      concept: formData.get("concept"),
+      date: formData.get("date"),
+      startTime: formData.get("startTime"),
+      endTime: formData.get("endTime"),
+      category: formData.get("category"),
+      admissionType: formData.get("admissionType"),
+      ticketPrice: formData.get("ticketPrice"),
+      expectedAttendance: formData.get("expectedAttendance"),
+      audience: formData.get("audience"),
+      ageRestriction: formData.get("ageRestriction"),
+      owner: formData.get("owner"),
+      status: formData.get("status")
+    });
+    if (!parsed.success) {
+      setCalendarEventError(parsed.error.issues[0]?.message ?? "Unable to schedule idea.");
+      return;
+    }
+    handleCalendarEventSubmit(formData);
+    setIdeaToSchedule(null);
   }
 
   function approveRecommendation(recommendation: EventRecommendation) {
@@ -662,6 +690,8 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
 
           {activePage === "Yearly Marketing Plan" && <YearlyMarketingPlanView plan={state.yearlyPlan} />}
 
+          {activePage === "Ideas" && <IdeasView ideas={state.ideas} onSchedule={setIdeaToSchedule} />}
+
           {activePage === "Recommendation Inbox" && (
             <RecommendationInbox
               recommendations={state.recommendations}
@@ -700,6 +730,7 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
       {calendarEventDate && (
         <CalendarEventModal
           date={calendarEventDate}
+          idea={null}
           error={calendarEventError}
           onClose={() => {
             setCalendarEventDate(null);
@@ -708,28 +739,48 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
           onSubmit={handleCalendarEventSubmit}
         />
       )}
+      {ideaToSchedule && (
+        <CalendarEventModal
+          date=""
+          idea={ideaToSchedule}
+          error={calendarEventError}
+          onClose={() => {
+            setIdeaToSchedule(null);
+            setCalendarEventError("");
+          }}
+          onSubmit={handleIdeaScheduleSubmit}
+        />
+      )}
     </div>
   );
 }
 
 function CalendarEventModal({
   date,
+  idea,
   error,
   onClose,
   onSubmit
 }: {
   date: string;
+  idea: EventIdea | null;
   error: string;
   onClose: () => void;
   onSubmit: (formData: FormData) => void;
 }) {
+  const modalTitle = date ? `Add Event for ${format(parseISO(date), "MMMM d, yyyy")}` : `Schedule: ${idea?.title ?? "Idea"}`;
+  const defaultDate = date || "";
+  const defaultTicketPrice = String(idea?.estimatedTicketPrice ?? 15);
+  const defaultAttendance = String(idea?.estimatedAttendance ?? 75);
+  const defaultTime = toTimeInputValue(idea?.suggestedTime ?? "7:00 PM");
+
   return (
     <div className="no-print fixed inset-0 z-50 grid place-items-center bg-[#11251b]/70 p-4">
       <div className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-lg border border-[#d9dedb] bg-white p-5 shadow-2xl">
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-black uppercase tracking-normal text-moss">Manual Calendar Event</p>
-            <h2 className="text-2xl font-black tracking-normal">Add Event for {format(parseISO(date), "MMMM d, yyyy")}</h2>
+            <h2 className="text-2xl font-black tracking-normal">{modalTitle}</h2>
             <p className="mt-1 text-sm text-muted">This creates an internal planning event. It does not publish or confirm anything publicly.</p>
           </div>
           <button className="rounded-lg border border-[#cbd3cf] px-3 py-2 text-sm font-black hover:border-moss hover:text-moss" type="button" onClick={onClose}>
@@ -739,13 +790,13 @@ function CalendarEventModal({
 
         <form action={onSubmit} className="grid gap-4">
           <div className="grid gap-3 md:grid-cols-2">
-            <FormInput name="name" label="Event name" defaultValue="New On Par Event" />
-            <FormInput name="date" label="Event date" type="date" defaultValue={date} />
-            <FormInput name="startTime" label="Start time" type="time" defaultValue="19:00" />
+            <FormInput name="name" label="Event name" defaultValue={idea?.title ?? "New On Par Event"} />
+            <FormInput name="date" label="Event date" type="date" defaultValue={defaultDate} />
+            <FormInput name="startTime" label="Start time" type="time" defaultValue={defaultTime} />
             <FormInput name="endTime" label="End time" type="time" defaultValue="21:00" />
             <label className="grid gap-1 text-sm font-bold">
               Category
-              <select name="category" className="rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal" defaultValue="Other">
+              <select name="category" className="rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal" defaultValue={idea?.category ?? "Other"}>
                 {eventCategories.map((category) => <option key={category}>{category}</option>)}
               </select>
             </label>
@@ -755,9 +806,9 @@ function CalendarEventModal({
                 {["Free", "Paid", "Donation", "Private"].map((type) => <option key={type}>{type}</option>)}
               </select>
             </label>
-            <FormInput name="ticketPrice" label="Ticket price" type="number" defaultValue="15" />
-            <FormInput name="expectedAttendance" label="Expected attendance" type="number" defaultValue="75" />
-            <FormInput name="audience" label="Audience" defaultValue="On Par guests" />
+            <FormInput name="ticketPrice" label="Ticket price" type="number" defaultValue={defaultTicketPrice} />
+            <FormInput name="expectedAttendance" label="Expected attendance" type="number" defaultValue={defaultAttendance} />
+            <FormInput name="audience" label="Audience" defaultValue={idea?.intendedAudience ?? "On Par guests"} />
             <FormInput name="ageRestriction" label="Age restriction" defaultValue="Management to confirm" />
             <FormInput name="owner" label="Planning owner" defaultValue="Marketing" />
             <label className="grid gap-1 text-sm font-bold">
@@ -767,7 +818,7 @@ function CalendarEventModal({
               </select>
             </label>
           </div>
-          <FormText name="concept" label="Event concept" defaultValue="Describe the event idea, audience, food/drink angle, entertainment needs, and promotion notes." />
+          <FormText name="concept" label="Event concept" defaultValue={idea ? `${idea.concept}\n\nFood/drink angle: ${idea.foodDrinkAngle}\n\nMarketing hook: ${idea.marketingHook}` : "Describe the event idea, audience, food/drink angle, entertainment needs, and promotion notes."} />
           {error && <p className="rounded-lg bg-[#fff0ed] p-2 text-sm font-bold text-[#7e251b]">{error}</p>}
           <div className="flex flex-wrap justify-end gap-2">
             <Button type="button" onClick={onClose}>Cancel</Button>
@@ -942,6 +993,96 @@ function YearlyMarketingPlanView({ plan }: { plan: DashboardState["yearlyPlan"] 
                     </a>
                   ))}
                 </div>
+              </div>
+            </div>
+          </Panel>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function IdeasView({ ideas, onSchedule }: { ideas: EventIdea[]; onSchedule: (idea: EventIdea) => void }) {
+  const [category, setCategory] = useState("All");
+  const [month, setMonth] = useState("All");
+  const [query, setQuery] = useState("");
+  const months = Array.from(new Set(ideas.flatMap((idea) => idea.bestMonths)));
+  const filtered = ideas.filter((idea) => {
+    const matchesCategory = category === "All" || idea.category === category;
+    const matchesMonth = month === "All" || idea.bestMonths.includes(month);
+    const matchesQuery = [idea.title, idea.concept, idea.whyItFits, idea.trendBasis, idea.marketingHook].join(" ").toLowerCase().includes(query.toLowerCase());
+    return matchesCategory && matchesMonth && matchesQuery;
+  });
+
+  return (
+    <section className="grid gap-4">
+      <Panel
+        title="Fresh Event Ideas"
+        action={<span className="rounded-full bg-[#fff5df] px-3 py-1 text-xs font-black text-[#7a5100]">{filtered.length} ideas</span>}
+      >
+        <p className="text-sm text-muted">
+          These are new idea-bank concepts inspired by current event, food, beverage, social, and nightlife trends. They are separate from the events already suggested or scheduled in the roadmap. Pick one, choose a date, and schedule it manually.
+        </p>
+        <div className="no-print mt-4 grid gap-3 lg:grid-cols-[1fr_180px_180px]">
+          <label className="grid gap-1 text-sm font-bold">
+            Search ideas
+            <input className="rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal" value={query} onChange={(event) => setQuery(event.target.value)} />
+          </label>
+          <label className="grid gap-1 text-sm font-bold">
+            Category
+            <select className="rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal" value={category} onChange={(event) => setCategory(event.target.value)}>
+              <option>All</option>
+              {eventCategories.map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-bold">
+            Best month
+            <select className="rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal" value={month} onChange={(event) => setMonth(event.target.value)}>
+              <option>All</option>
+              {months.map((item) => <option key={item}>{item}</option>)}
+            </select>
+          </label>
+        </div>
+      </Panel>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        {filtered.map((idea) => (
+          <Panel
+            key={idea.id}
+            title={idea.title}
+            action={<span className="rounded-full bg-[#edf8ed] px-3 py-1 text-xs font-black text-moss">{idea.category}</span>}
+          >
+            <div className="grid gap-3">
+              <p className="text-sm text-muted">{idea.concept}</p>
+              <div className="grid gap-2 md:grid-cols-2">
+                <Info label="Best months" value={idea.bestMonths.join(", ")} />
+                <Info label="Best days" value={idea.bestDays.join(", ")} />
+                <Info label="Suggested time" value={idea.suggestedTime} />
+                <Info label="Estimated price" value={`$${idea.estimatedTicketPrice}`} />
+                <Info label="Estimated attendance" value={idea.estimatedAttendance} />
+                <Info label="Audience" value={idea.intendedAudience} />
+              </div>
+              <PlanList title="Why it fits On Par" items={[idea.whyItFits]} />
+              <PlanList title="Food and drink angle" items={[idea.foodDrinkAngle]} />
+              <PlanList title="Marketing hook" items={[idea.marketingHook]} />
+              <PlanList title="Trend basis" items={[idea.trendBasis]} />
+              <div>
+                <p className="text-xs font-black uppercase text-muted">Research sources</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {idea.sourceLinks.map((source) => (
+                    <a
+                      key={`${idea.id}-${source.url}`}
+                      className="rounded-full border border-[#cbd3cf] px-3 py-1 text-xs font-bold text-moss hover:border-moss"
+                      href={source.url}
+                      target="_blank"
+                    >
+                      {source.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+              <div className="no-print pt-1">
+                <Button onClick={() => onSchedule(idea)} icon={CalendarDays}>Schedule This Idea</Button>
               </div>
             </div>
           </Panel>
@@ -1412,7 +1553,17 @@ function loadState(initialState: DashboardState) {
   const saved = localStorage.getItem(storageKey);
   if (!saved) return initialState;
   try {
-    return JSON.parse(saved) as DashboardState;
+    const parsed = JSON.parse(saved) as Partial<DashboardState>;
+    return {
+      ...initialState,
+      ...parsed,
+      events: parsed.events ?? initialState.events,
+      recommendations: parsed.recommendations ?? initialState.recommendations,
+      templates: parsed.templates ?? initialState.templates,
+      researchRuns: parsed.researchRuns ?? initialState.researchRuns,
+      yearlyPlan: parsed.yearlyPlan ?? initialState.yearlyPlan,
+      ideas: parsed.ideas ?? initialState.ideas
+    };
   } catch {
     return initialState;
   }
@@ -1436,6 +1587,16 @@ function defaultScoreFactors(): ScoreFactors {
     pastPerformance: 60,
     customerInterest: 70
   };
+}
+
+function toTimeInputValue(timeLabel: string) {
+  const match = timeLabel.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return "19:00";
+  const [, hourText, minuteText, period] = match;
+  let hour = Number(hourText);
+  if (period.toUpperCase() === "PM" && hour !== 12) hour += 12;
+  if (period.toUpperCase() === "AM" && hour === 12) hour = 0;
+  return `${String(hour).padStart(2, "0")}:${minuteText}`;
 }
 
 function groupBy<T>(items: T[], getKey: (item: T) => string) {
