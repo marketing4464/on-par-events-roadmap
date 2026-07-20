@@ -86,6 +86,7 @@ type ActivePage =
   | "Dashboard"
   | "Master Calendar"
   | "Annual Roadmap"
+  | "Yearly Marketing Plan"
   | "Recommendation Inbox"
   | "Event Research"
   | "Event Reports"
@@ -101,6 +102,7 @@ const navItems: Array<{ label: ActivePage; icon: React.ElementType }> = [
   { label: "Dashboard", icon: LayoutDashboard },
   { label: "Master Calendar", icon: CalendarDays },
   { label: "Annual Roadmap", icon: CalendarDays },
+  { label: "Yearly Marketing Plan", icon: Filter },
   { label: "Recommendation Inbox", icon: Inbox },
   { label: "Event Research", icon: Search },
   { label: "Event Reports", icon: FileText },
@@ -658,6 +660,8 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
 
           {activePage === "Annual Roadmap" && <AnnualRoadmap events={filteredEvents} onSelect={(id) => { setSelectedEventId(id); setActivePage("Event Reports"); }} />}
 
+          {activePage === "Yearly Marketing Plan" && <YearlyMarketingPlanView plan={state.yearlyPlan} />}
+
           {activePage === "Recommendation Inbox" && (
             <RecommendationInbox
               recommendations={state.recommendations}
@@ -896,6 +900,67 @@ function AnnualRoadmap({ events, onSelect }: { events: RoadmapEvent[]; onSelect:
         </Panel>
       ))}
     </section>
+  );
+}
+
+function YearlyMarketingPlanView({ plan }: { plan: DashboardState["yearlyPlan"] }) {
+  return (
+    <section className="grid gap-4">
+      <Panel
+        title="Yearly Marketing Plan"
+        action={<span className="rounded-full bg-[#edf8ed] px-3 py-1 text-xs font-black text-moss">Rolling 12 months</span>}
+      >
+        <p className="text-sm text-muted">
+          Researched plan for August 2026 through July 2027. It combines federal holidays, Dayton-area happenings, major sports/entertainment moments, food/social media hooks, and On Par's existing trivia/bingo/fandom themes. Verify dates and licensing before publishing public campaigns.
+        </p>
+      </Panel>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        {plan.map((month) => (
+          <Panel key={month.month} title={month.month}>
+            <div className="grid gap-4">
+              <div>
+                <p className="text-xs font-black uppercase text-muted">Strategy</p>
+                <p className="mt-1 text-sm">{month.strategy}</p>
+              </div>
+              <PlanList title="Calendar anchors" items={month.calendarAnchors} />
+              <PlanList title="On Par tie-ins" items={month.onParTieIns} />
+              <PlanList title="Best event ideas" items={month.recommendedEvents} />
+              <PlanList title="Content angles" items={month.contentAngles} />
+              <PlanList title="Timing notes" items={month.timingNotes} />
+              <div>
+                <p className="text-xs font-black uppercase text-muted">Sources</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {month.sources.map((source) => (
+                    <a
+                      key={`${month.month}-${source.url}`}
+                      className="rounded-full border border-[#cbd3cf] px-3 py-1 text-xs font-bold text-moss hover:border-moss"
+                      href={source.url}
+                      target="_blank"
+                    >
+                      {source.label}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Panel>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PlanList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <p className="text-xs font-black uppercase text-muted">{title}</p>
+      <ul className="mt-2 grid gap-1 pl-5 text-sm">
+        {items.map((item) => (
+          <li className="list-disc" key={item}>{item}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

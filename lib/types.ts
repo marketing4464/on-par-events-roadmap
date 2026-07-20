@@ -214,9 +214,26 @@ export type ResearchRun = {
   searchCosts: string;
 };
 
+export type MarketingPlanSource = {
+  label: string;
+  url: string;
+};
+
+export type YearlyMarketingMonth = {
+  month: string;
+  strategy: string;
+  calendarAnchors: string[];
+  onParTieIns: string[];
+  recommendedEvents: string[];
+  contentAngles: string[];
+  timingNotes: string[];
+  sources: MarketingPlanSource[];
+};
+
 export type DashboardState = {
   events: RoadmapEvent[];
   recommendations: EventRecommendation[];
   templates: EventTemplate[];
   researchRuns: ResearchRun[];
+  yearlyPlan: YearlyMarketingMonth[];
 };
