@@ -6,6 +6,7 @@ import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
+import type { DateClickArg } from "@fullcalendar/interaction";
 import { addDays, differenceInCalendarDays, format, isPast, parseISO } from "date-fns";
 import {
   AlertTriangle,
@@ -63,6 +64,22 @@ const manualRecommendationSchema = z.object({
   inspirationLink: z.string().optional(),
   notes: z.string().optional(),
   researchRequested: z.boolean().default(false)
+});
+
+const manualCalendarEventSchema = z.object({
+  name: z.string().min(3, "Event name is required."),
+  concept: z.string().min(10, "Add a short event concept."),
+  date: z.string().min(1, "Event date is required."),
+  startTime: z.string().min(1, "Start time is required."),
+  endTime: z.string().min(1, "End time is required."),
+  category: z.string().min(1),
+  admissionType: z.enum(["Free", "Paid", "Donation", "Private"]),
+  ticketPrice: z.coerce.number().min(0),
+  expectedAttendance: z.coerce.number().min(1),
+  audience: z.string().min(3, "Audience is required."),
+  ageRestriction: z.string().min(2, "Age restriction is required."),
+  owner: z.string().min(2, "Owner is required."),
+  status: z.string().min(1)
 });
 
 type ActivePage =
@@ -141,6 +158,8 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [message, setMessage] = useState("Ready. AI cannot approve or publish events automatically.");
   const [manualError, setManualError] = useState("");
+  const [calendarEventDate, setCalendarEventDate] = useState<string | null>(null);
+  const [calendarEventError, setCalendarEventError] = useState("");
 
   const selectedEvent = state.events.find((event) => event.id === selectedEventId) ?? state.events[0];
 
@@ -175,6 +194,80 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
     const nextEvents = state.events.map((event) => (event.id === eventId ? { ...event, ...updates } : event));
     const rechecked = nextEvents.map((event) => ({ ...event, warnings: checkConflicts(event, nextEvents) }));
     persist({ ...state, events: rechecked }, successMessage);
+  }
+
+  function handleCalendarDateClick(info: DateClickArg) {
+    setCalendarEventDate(info.dateStr);
+    setCalendarEventError("");
+    setMessage(`Adding a manual event for ${format(parseISO(info.dateStr), "MMMM d, yyyy")}.`);
+  }
+
+  function handleCalendarEventSubmit(formData: FormData) {
+    const parsed = manualCalendarEventSchema.safeParse({
+      name: formData.get("name"),
+      concept: formData.get("concept"),
+      date: formData.get("date"),
+      startTime: formData.get("startTime"),
+      endTime: formData.get("endTime"),
+      category: formData.get("category"),
+      admissionType: formData.get("admissionType"),
+      ticketPrice: formData.get("ticketPrice"),
+      expectedAttendance: formData.get("expectedAttendance"),
+      audience: formData.get("audience"),
+      ageRestriction: formData.get("ageRestriction"),
+      owner: formData.get("owner"),
+      status: formData.get("status")
+    });
+
+    if (!parsed.success) {
+      setCalendarEventError(parsed.error.issues[0]?.message ?? "Unable to add event.");
+      return;
+    }
+
+    const data = parsed.data;
+    const date = parseISO(data.date);
+    const eventSize = data.admissionType === "Paid" ? "Standard" : "Small";
+    const newEvent: RoadmapEvent = {
+      id: `manual-event-${Date.now()}`,
+      name: data.name,
+      concept: data.concept,
+      date: data.date,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      category: data.category as EventCategory,
+      admissionType: data.admissionType,
+      ticketPrice: data.admissionType === "Paid" ? data.ticketPrice : data.ticketPrice || undefined,
+      status: data.status as EventStatus,
+      audience: data.audience,
+      ageRestriction: data.ageRestriction,
+      expectedAttendance: data.expectedAttendance,
+      owner: data.owner,
+      planningProgress: 10,
+      marketingProgress: 0,
+      marketingStage: "Concept",
+      profitability: data.admissionType === "Paid" ? "Unknown" : "Moderate",
+      internalOrPartner: "Internal",
+      source: "Manual",
+      warnings: [],
+      report: createEventReport(data.name, data.category as EventCategory, date, data.ticketPrice),
+      tasks: createMarketingTasks(date, eventSize),
+      budget: createBudget(data.expectedAttendance, data.admissionType === "Paid" ? data.ticketPrice : 0),
+      auditHistory: [
+        {
+          id: `audit-${Date.now()}`,
+          date: new Date().toISOString(),
+          actor: "Marketing user",
+          action: "Manual calendar event created",
+          notes: "Created by clicking a calendar day. Human approval still controls publishing."
+        }
+      ]
+    };
+    const nextEvents = [...state.events, newEvent].map((event) => ({ ...event, warnings: checkConflicts(event, [...state.events, newEvent]) }));
+    persist({ ...state, events: nextEvents }, `${data.name} was added to ${format(date, "MMMM d, yyyy")}.`);
+    setCalendarEventDate(null);
+    setCalendarEventError("");
+    setSelectedEventId(newEvent.id);
+    setActivePage("Event Reports");
   }
 
   function approveRecommendation(recommendation: EventRecommendation) {
@@ -543,7 +636,9 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
                   }}
                   height="auto"
                   editable
+                  selectable
                   droppable={false}
+                  dateClick={handleCalendarDateClick}
                   eventDrop={handleEventDrop}
                   eventClick={(info) => {
                     setSelectedEventId(info.event.id);
@@ -597,6 +692,84 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
           {activePage === "Sources" && <SourcesView recommendations={state.recommendations} />}
           {activePage === "Settings" && <SettingsView templates={state.templates} onReset={resetState} />}
         </main>
+      </div>
+      {calendarEventDate && (
+        <CalendarEventModal
+          date={calendarEventDate}
+          error={calendarEventError}
+          onClose={() => {
+            setCalendarEventDate(null);
+            setCalendarEventError("");
+          }}
+          onSubmit={handleCalendarEventSubmit}
+        />
+      )}
+    </div>
+  );
+}
+
+function CalendarEventModal({
+  date,
+  error,
+  onClose,
+  onSubmit
+}: {
+  date: string;
+  error: string;
+  onClose: () => void;
+  onSubmit: (formData: FormData) => void;
+}) {
+  return (
+    <div className="no-print fixed inset-0 z-50 grid place-items-center bg-[#11251b]/70 p-4">
+      <div className="max-h-[92vh] w-full max-w-3xl overflow-auto rounded-lg border border-[#d9dedb] bg-white p-5 shadow-2xl">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-black uppercase tracking-normal text-moss">Manual Calendar Event</p>
+            <h2 className="text-2xl font-black tracking-normal">Add Event for {format(parseISO(date), "MMMM d, yyyy")}</h2>
+            <p className="mt-1 text-sm text-muted">This creates an internal planning event. It does not publish or confirm anything publicly.</p>
+          </div>
+          <button className="rounded-lg border border-[#cbd3cf] px-3 py-2 text-sm font-black hover:border-moss hover:text-moss" type="button" onClick={onClose}>
+            Close
+          </button>
+        </div>
+
+        <form action={onSubmit} className="grid gap-4">
+          <div className="grid gap-3 md:grid-cols-2">
+            <FormInput name="name" label="Event name" defaultValue="New On Par Event" />
+            <FormInput name="date" label="Event date" type="date" defaultValue={date} />
+            <FormInput name="startTime" label="Start time" type="time" defaultValue="19:00" />
+            <FormInput name="endTime" label="End time" type="time" defaultValue="21:00" />
+            <label className="grid gap-1 text-sm font-bold">
+              Category
+              <select name="category" className="rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal" defaultValue="Other">
+                {eventCategories.map((category) => <option key={category}>{category}</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-bold">
+              Free or paid
+              <select name="admissionType" className="rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal" defaultValue="Paid">
+                {["Free", "Paid", "Donation", "Private"].map((type) => <option key={type}>{type}</option>)}
+              </select>
+            </label>
+            <FormInput name="ticketPrice" label="Ticket price" type="number" defaultValue="15" />
+            <FormInput name="expectedAttendance" label="Expected attendance" type="number" defaultValue="75" />
+            <FormInput name="audience" label="Audience" defaultValue="On Par guests" />
+            <FormInput name="ageRestriction" label="Age restriction" defaultValue="Management to confirm" />
+            <FormInput name="owner" label="Planning owner" defaultValue="Marketing" />
+            <label className="grid gap-1 text-sm font-bold">
+              Planning status
+              <select name="status" className="rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal" defaultValue="Idea">
+                {eventStatuses.map((status) => <option key={status}>{status}</option>)}
+              </select>
+            </label>
+          </div>
+          <FormText name="concept" label="Event concept" defaultValue="Describe the event idea, audience, food/drink angle, entertainment needs, and promotion notes." />
+          {error && <p className="rounded-lg bg-[#fff0ed] p-2 text-sm font-bold text-[#7e251b]">{error}</p>}
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button type="button" onClick={onClose}>Cancel</Button>
+            <Button type="submit" icon={Plus}>Add Event</Button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -1141,11 +1314,11 @@ function FormInput(props: {
   );
 }
 
-function FormText({ name, label }: { name: string; label: string }) {
+function FormText({ name, label, defaultValue }: { name: string; label: string; defaultValue?: string }) {
   return (
     <label className="grid gap-1 text-sm font-bold">
       {label}
-      <textarea name={name} className="min-h-24 rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal" />
+      <textarea name={name} defaultValue={defaultValue} className="min-h-24 rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal" />
     </label>
   );
 }
