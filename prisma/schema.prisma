@@ -1,0 +1,470 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AdmissionType {
+  FREE
+  PAID
+  DONATION
+  PRIVATE
+}
+
+enum EventStatus {
+  IDEA
+  RESEARCHING
+  RECOMMENDATION_READY
+  NEEDS_REVIEW
+  TENTATIVELY_APPROVED
+  BUDGET_REVIEW
+  APPROVED
+  PLANNING
+  MARKETING
+  REGISTRATION_OPEN
+  SOLD_OUT
+  COMPLETED
+  POST_EVENT_REVIEW
+  DENIED
+  POSTPONED
+  CANCELLED
+  ARCHIVED
+}
+
+enum RecommendationSource {
+  MANUAL
+  AI_GENERATED
+  WEB_RESEARCH
+  IMPORTED_EVENT
+  PAST_EVENT
+  SEASONAL
+  HOLIDAY
+  CUSTOMER_REQUEST
+  SOCIAL_TREND
+  COMPETITOR_RESEARCH
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  OVERDUE
+}
+
+enum DecisionType {
+  APPROVE
+  DENY
+  EDIT
+  POSTPONE
+  ARCHIVE
+  REQUEST_RESEARCH
+  ADD_TENTATIVE
+}
+
+model User {
+  id            String             @id @default(cuid())
+  name          String?
+  email         String             @unique
+  role          String             @default("marketing")
+  image         String?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  ownedEvents   Event[]            @relation("EventOwner")
+  decisions     ApprovalDecision[]
+  notifications Notification[]
+}
+
+model Venue {
+  id          String   @id @default(cuid())
+  name        String
+  address     String?
+  city        String?
+  state       String?
+  capacity    Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Event[]
+}
+
+model EventCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  events      Event[]
+  templates   EventTemplate[]
+}
+
+model TargetAudience {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Event {
+  id                  String             @id @default(cuid())
+  name                String
+  tagline             String?
+  concept             String             @db.Text
+  objective           String?
+  startAt             DateTime
+  endAt               DateTime
+  categoryId          String?
+  category            EventCategory?     @relation(fields: [categoryId], references: [id])
+  admissionType       AdmissionType      @default(FREE)
+  ticketPrice         Decimal?           @db.Decimal(10, 2)
+  status              EventStatus        @default(IDEA)
+  intendedAudience    String?
+  ageRestriction      String?
+  expectedAttendance  Int?
+  planningProgress    Int                @default(0)
+  marketingProgress   Int                @default(0)
+  profitability       String?
+  ownerId             String?
+  owner               User?              @relation("EventOwner", fields: [ownerId], references: [id])
+  venueId             String?
+  venue               Venue?             @relation(fields: [venueId], references: [id])
+  isImported          Boolean            @default(false)
+  isMajor             Boolean            @default(false)
+  isAnniversary       Boolean            @default(false)
+  sourceUrl           String?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  report              EventReport?
+  tasks               EventTask[]
+  budgets             EventBudget[]
+  menus               EventMenu[]
+  beveragePlans       EventBeveragePlan[]
+  decorPlans          EventDecorPlan[]
+  equipment           EventEquipment[]
+  staffRoles          EventStaffRole[]
+  vendors             EventVendor[]
+  marketingPlan       EventMarketingPlan?
+  performance         EventPerformance?
+  decisions           ApprovalDecision[]
+  imports             EventImport[]
+  conflicts           EventConflict[]
+  attachments         Attachment[]
+}
+
+model EventRecommendation {
+  id                    String               @id @default(cuid())
+  title                 String
+  concept               String               @db.Text
+  recommendedDate       DateTime
+  recommendedStartTime  String
+  estimatedTicketPrice  Decimal?             @db.Decimal(10, 2)
+  estimatedAttendance   Int?
+  intendedAudience      String
+  eventCategory         String
+  reason                String               @db.Text
+  seasonalRelevance     String?
+  planningDifficulty    String?
+  marketingDifficulty   String?
+  revenuePotential      String?
+  riskLevel             String?
+  confidenceScore       Int
+  source                RecommendationSource @default(MANUAL)
+  status                EventStatus          @default(NEEDS_REVIEW)
+  denialReason          String?
+  denialNotes           String?
+  scoreFactors          Json
+  similarEvents         Json?
+  potentialConflicts    Json?
+  researchSources       EventResearchSource[]
+  decisions             ApprovalDecision[]
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+}
+
+model EventReport {
+  id            String   @id @default(cuid())
+  eventId       String   @unique
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  generatedBy   String?
+  generatedAt   DateTime @default(now())
+  modelName     String?
+  status        String   @default("Draft")
+  overview      Json
+  brandFit      Json
+  runOfShow     Json
+  floorPlan     Json
+  decorPlan     Json
+  foodPlan      Json
+  beveragePlan  Json
+  equipmentPlan Json
+  staffingPlan  Json
+  pricingPlan   Json
+  budgetPlan    Json
+  marketingPlan Json
+  contentPlan   Json
+  riskPlan      Json
+  successPlan   Json
+  postEventPlan Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model EventResearchSource {
+  id                String               @id @default(cuid())
+  recommendationId  String?
+  recommendation    EventRecommendation? @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  researchRunId      String?
+  researchRun        ResearchRun?         @relation(fields: [researchRunId], references: [id])
+  title              String
+  url                String
+  publisher          String?
+  publicationDate    DateTime?
+  searchDate         DateTime             @default(now())
+  summary            String               @db.Text
+  excerpt            String?
+  reliability        String
+}
+
+model EventTask {
+  id          String     @id @default(cuid())
+  eventId     String
+  event       Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  title       String
+  dueDate     DateTime
+  owner       String?
+  stage       String
+  status      TaskStatus @default(TODO)
+  notes       String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model EventBudget {
+  id        String           @id @default(cuid())
+  eventId   String
+  event     Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  scenario  String
+  lineItems BudgetLineItem[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+}
+
+model BudgetLineItem {
+  id        String      @id @default(cuid())
+  budgetId  String
+  budget    EventBudget @relation(fields: [budgetId], references: [id], onDelete: Cascade)
+  label     String
+  category  String
+  amount    Decimal     @db.Decimal(10, 2)
+  notes     String?
+}
+
+model EventMenu {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  items     Json
+  notes     String?
+  createdAt DateTime @default(now())
+}
+
+model EventBeveragePlan {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  plan      Json
+  createdAt DateTime @default(now())
+}
+
+model EventDecorPlan {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  plan      Json
+  createdAt DateTime @default(now())
+}
+
+model EventEquipment {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String
+  status    String
+  notes     String?
+}
+
+model EventStaffRole {
+  id              String @id @default(cuid())
+  eventId          String
+  event            Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  role             String
+  estimatedHours   Decimal @db.Decimal(6, 2)
+  responsibilities String  @db.Text
+}
+
+model EventVendor {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String
+  type      String
+  contact   String?
+  status    String
+  notes     String?
+}
+
+model EventMarketingPlan {
+  id        String   @id @default(cuid())
+  eventId   String   @unique
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tasks     Json
+  assets    MarketingAsset[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model MarketingAsset {
+  id              String             @id @default(cuid())
+  marketingPlanId String
+  marketingPlan   EventMarketingPlan @relation(fields: [marketingPlanId], references: [id], onDelete: Cascade)
+  assetType       String
+  title           String
+  status          String
+  dueDate         DateTime?
+  url             String?
+}
+
+model EventPerformance {
+  id                    String   @id @default(cuid())
+  eventId                String   @unique
+  event                  Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  actualAttendance       Int?
+  ticketsSold            Int?
+  actualRevenue          Decimal? @db.Decimal(10, 2)
+  actualExpenses         Decimal? @db.Decimal(10, 2)
+  foodSales              Decimal? @db.Decimal(10, 2)
+  beverageSales          Decimal? @db.Decimal(10, 2)
+  entertainmentSales     Decimal? @db.Decimal(10, 2)
+  customerFeedback       String?  @db.Text
+  staffFeedback          String?  @db.Text
+  shouldReturn           Boolean?
+  recommendedFutureDate  DateTime?
+  postEventSummary       Json?
+}
+
+model ApprovalDecision {
+  id                 String               @id @default(cuid())
+  eventId            String?
+  event              Event?               @relation(fields: [eventId], references: [id])
+  recommendationId   String?
+  recommendation     EventRecommendation? @relation(fields: [recommendationId], references: [id])
+  userId             String?
+  user               User?                @relation(fields: [userId], references: [id])
+  decision           DecisionType
+  decisionDate       DateTime             @default(now())
+  previousStatus     String?
+  newStatus          String?
+  denialReason       String?
+  notes              String?
+  requestedChanges   String?
+}
+
+model DenialReason {
+  id        String   @id @default(cuid())
+  label     String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model EventImport {
+  id                  String    @id @default(cuid())
+  eventId              String?
+  event                Event?    @relation(fields: [eventId], references: [id])
+  source               String
+  sourceUrl            String?
+  sourceEventId        String?
+  lastSyncedAt         DateTime?
+  importStatus         String
+  originalDescription  String?   @db.Text
+  originalTicketPrice  String?
+  originalImageUrl     String?
+  createdAt            DateTime  @default(now())
+}
+
+model ResearchRun {
+  id                     String                @id @default(cuid())
+  runAt                  DateTime              @default(now())
+  rangeLabel             String
+  queriesUsed            Json
+  recommendationsCreated Int                   @default(0)
+  duplicatesSkipped      Int                   @default(0)
+  errors                 Json?
+  tokenUsage             Json?
+  searchCosts            Json?
+  sources                EventResearchSource[]
+}
+
+model CalendarRule {
+  id          String   @id @default(cuid())
+  name        String
+  ruleType    String
+  config      Json
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Holiday {
+  id        String   @id @default(cuid())
+  name      String
+  date      DateTime
+  type      String
+  notes     String?
+}
+
+model EventConflict {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  severity  String
+  type      String
+  message   String
+  canOverride Boolean @default(true)
+  createdAt DateTime @default(now())
+}
+
+model EventTemplate {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  categoryId  String?
+  category    EventCategory? @relation(fields: [categoryId], references: [id])
+  starterData Json
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  title     String
+  body      String
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  eventId   String?
+  event     Event?   @relation(fields: [eventId], references: [id])
+  fileName  String
+  fileUrl   String
+  fileType  String
+  createdAt DateTime @default(now())
+}

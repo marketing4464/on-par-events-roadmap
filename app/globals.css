@@ -1,0 +1,60 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: #f6f8f5;
+  color: #17201d;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+  }
+}
+
+.fc {
+  --fc-border-color: #d9dedb;
+  --fc-button-bg-color: #12633d;
+  --fc-button-border-color: #12633d;
+  --fc-button-hover-bg-color: #0d4d2f;
+  --fc-button-hover-border-color: #0d4d2f;
+  --fc-button-active-bg-color: #0d4d2f;
+  --fc-button-active-border-color: #0d4d2f;
+  font-family: inherit;
+}
+
+.fc .fc-toolbar-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+}
+
+.fc-event {
+  border-radius: 6px;
+  border: 0;
+  padding: 2px 3px;
+}

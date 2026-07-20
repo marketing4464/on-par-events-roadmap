@@ -1,23 +1,84 @@
-# On Par Entertainment Events Roadmap
+# On Par Marketing Roadmap
 
-Static Vercel site for the 90-day On Par Entertainment marketing events calendar.
+Production-oriented Next.js dashboard for planning On Par Entertainment marketing events.
 
-## Update Events
+## What Is Built
 
-The shared live version is driven by:
+- Rolling 12-month roadmap generator
+- First-Wednesday trivia rule
+- First-Thursday bingo rule
+- Paid-event week placeholders outside the first week
+- Permanent November 16 anniversary placeholder with anniversary number
+- Master calendar with month, week, and agenda views
+- Drag-to-reschedule with conflict warnings
+- Dashboard widgets
+- Recommendation inbox
+- Manual staff recommendation form
+- Approval, denial, archive, merge, and research-request actions
+- Event detail/report editor
+- Printable event packet layout
+- Marketing timeline and task views
+- Budget overview with low/expected/high scenarios
+- CSV import for existing events
+- Research log
+- Event templates
+- PostgreSQL Prisma schema for the full product model
+- Vercel Cron endpoint in dry-run recommendation mode
+- Optional Basic Auth protection through environment variables
 
-```text
-src/data/events.json
-```
+The AI and cron paths never approve, publish, contact vendors, spend money, or create ticket listings automatically.
 
-Edit that file in GitHub, commit to `main`, and Vercel will redeploy the site.
-
-The page also has an `Edit` button. Changes made there are saved as a browser draft on that device. Use `Export JSON` to download the updated data, then replace `src/data/events.json` with the exported file when you want the public site updated.
-
-## Local Preview
+## Local Development
 
 ```bash
-npx serve .
+npm install
+npm run dev
 ```
 
-Open the local URL and verify the calendar before pushing changes.
+Open `http://localhost:3000`.
+
+## Validation
+
+```bash
+npm run typecheck
+npx prisma validate
+npm run build
+```
+
+Prisma validation needs a local `.env` with `DATABASE_URL`. Use `.env.example` as the template.
+
+## Environment Variables
+
+Set these in Vercel when enabling the full production integrations:
+
+```text
+DATABASE_URL
+AUTH_SECRET
+NEXTAUTH_SECRET
+AI_GATEWAY_API_KEY
+WEB_SEARCH_API_KEY
+EVENTBRITE_API_KEY
+CRON_SECRET
+MARKETING_ROADMAP_USER
+MARKETING_ROADMAP_PASSWORD
+```
+
+If `MARKETING_ROADMAP_USER` and `MARKETING_ROADMAP_PASSWORD` are set, the app requires Basic Auth. If they are not set, the dashboard remains open.
+
+## Data Persistence
+
+Phase 1 uses generated seed data plus browser local storage for interactive edits. The Prisma PostgreSQL schema is included in `prisma/schema.prisma` so the next phase can move writes to the database without redesigning the product model.
+
+## Cron
+
+`vercel.json` schedules:
+
+```text
+/api/cron/recommendations
+```
+
+The endpoint currently runs in safe dry-run mode and returns recommendations requiring human approval. Set `CRON_SECRET` to require bearer-token authorization.
+
+## Deployment
+
+This repo is connected to Vercel. Pushes to `main` redeploy the production site.
