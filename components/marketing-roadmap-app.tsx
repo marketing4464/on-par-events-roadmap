@@ -1019,7 +1019,7 @@ function IdeasView({ ideas, onSchedule }: { ideas: EventIdea[]; onSchedule: (ide
   const todayKey = format(new Date(), "yyyy-MM-dd");
   const months = Array.from(new Set(ideas.flatMap((idea) => idea.bestMonths)));
   const sortedIdeas = ideas.slice().sort((a, b) => (a.dailyDropDate ?? "0000-00-00").localeCompare(b.dailyDropDate ?? "0000-00-00"));
-  const todaysIdea = sortedIdeas.find((idea) => idea.dailyDropDate === todayKey) ?? sortedIdeas.find((idea) => idea.isDailyDrop);
+  const todaysIdeas = sortedIdeas.filter((idea) => idea.dailyDropDate === todayKey);
   const dailyCount = ideas.filter((idea) => idea.isDailyDrop).length;
   const filtered = sortedIdeas.filter((idea) => {
     const matchesCategory = category === "All" || idea.category === category;
@@ -1035,17 +1035,22 @@ function IdeasView({ ideas, onSchedule }: { ideas: EventIdea[]; onSchedule: (ide
         action={<span className="rounded-full bg-[#fff5df] px-3 py-1 text-xs font-black text-[#7a5100]">{dailyCount} daily drops</span>}
       >
         <p className="text-sm text-muted">
-          These are new idea-bank concepts inspired by current event, food, beverage, social, and nightlife trends. They are separate from the events already suggested or scheduled in the roadmap. The Daily Idea Stream carries at least one dated idea for every day in the next rolling year.
+          These are new idea-bank concepts inspired by current event, food, beverage, social, and nightlife trends. They are separate from the events already suggested or scheduled in the roadmap. The Daily Idea Stream carries at least three dated ideas for every day in the next rolling year.
         </p>
-        {todaysIdea && (
+        {todaysIdeas.length > 0 && (
           <div className="mt-4 rounded-lg border border-lime bg-[#f7ffe0] p-3">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-xs font-black uppercase text-moss">Today's idea drop</p>
-                <p className="font-black">{todaysIdea.title}</p>
-                <p className="text-sm text-muted">{todaysIdea.marketingHook}</p>
-              </div>
-              <Button onClick={() => onSchedule(todaysIdea)} icon={CalendarDays}>Schedule Today's Idea</Button>
+            <p className="text-xs font-black uppercase text-moss">Today's 3 idea drops</p>
+            <div className="mt-3 grid gap-3 xl:grid-cols-3">
+              {todaysIdeas.map((idea) => (
+                <div key={idea.id} className="rounded-lg border border-[#d9dedb] bg-white p-3">
+                  <p className="text-xs font-black text-muted">Idea {idea.dailyDropNumber ?? 1}</p>
+                  <p className="font-black">{idea.title}</p>
+                  <p className="mt-1 text-sm text-muted">{idea.marketingHook}</p>
+                  <div className="mt-3">
+                    <Button onClick={() => onSchedule(idea)} icon={CalendarDays}>Schedule Idea {idea.dailyDropNumber ?? 1}</Button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -1081,7 +1086,7 @@ function IdeasView({ ideas, onSchedule }: { ideas: EventIdea[]; onSchedule: (ide
             <div className="grid gap-3">
               {idea.dailyDropDate && (
                 <p className="w-fit rounded-full bg-[#eef4fb] px-3 py-1 text-xs font-black text-[#294b73]">
-                  Daily drop: {format(parseISO(idea.dailyDropDate), "MMM d, yyyy")}
+                  Daily drop {idea.dailyDropNumber ?? 1}: {format(parseISO(idea.dailyDropDate), "MMM d, yyyy")}
                 </p>
               )}
               <p className="text-sm text-muted">{idea.concept}</p>

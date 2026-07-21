@@ -465,34 +465,53 @@ const monthlySeasonalHooks: Record<number, string[]> = {
 };
 
 function buildDailyIdeaDrops(baseDate: Date): EventIdea[] {
-  return Array.from({ length: 365 }, (_, index) => {
-    const dropDate = addDays(baseDate, index);
-    const trend = dailyTrends[index % dailyTrends.length];
-    const seasonalHooks = monthlySeasonalHooks[dropDate.getMonth()] ?? ["social connection"];
-    const hook = seasonalHooks[index % seasonalHooks.length];
-    const variant = index % 4 === 0 ? "Challenge" : index % 4 === 1 ? "Social" : index % 4 === 2 ? "Lab" : "Night";
-    const title = `${hookTitle(hook)} ${trend.title.replace(/ Night$| Club$| Lab$/, "")} ${variant}`;
-
-    return {
-      id: `daily-${format(dropDate, "yyyy-MM-dd")}-${trend.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
-      dailyDropDate: format(dropDate, "yyyy-MM-dd"),
-      isDailyDrop: true,
-      title,
-      category: trend.category,
-      concept: `${trend.concept} Seasonal angle: build the promotion around ${hook}.`,
-      whyItFits: `This gives On Par a fresh daily idea tied to ${hook} while still using the venue's games, food, drinks, karaoke, and social spaces.`,
-      bestMonths: [format(dropDate, "MMMM")],
-      bestDays: trend.days,
-      suggestedTime: trend.time,
-      estimatedTicketPrice: trend.price,
-      estimatedAttendance: trend.attendance,
-      intendedAudience: trend.audience,
-      foodDrinkAngle: trend.foodDrinkAngle,
-      marketingHook: `${trend.marketingHook} ${hookTitle(hook)} edition.`,
-      trendBasis: trend.trendBasis,
-      sourceLinks: trend.sourceLinks
-    };
+  return Array.from({ length: 365 }).flatMap((_, dayIndex) => {
+    return [0, 1, 2].map((dropIndex) => createDailyIdeaDrop(baseDate, dayIndex, dropIndex));
   });
+}
+
+function createDailyIdeaDrop(baseDate: Date, dayIndex: number, dropIndex: number): EventIdea {
+  const index = dayIndex * 3 + dropIndex;
+  const dropStyles = ["Signature", "Social", "Food & Drink"];
+  const variants = ["Challenge", "Social", "Lab", "Night", "Tournament", "Club"];
+  const dropDate = addDays(baseDate, dayIndex);
+  const trend = dailyTrends[index % dailyTrends.length];
+  const seasonalHooks = monthlySeasonalHooks[dropDate.getMonth()] ?? ["social connection"];
+  const hook = seasonalHooks[index % seasonalHooks.length];
+  const variant = variants[index % variants.length];
+  const dropStyle = dropStyles[dropIndex];
+  const title = `${hookTitle(hook)} ${trend.title.replace(/ Night$| Club$| Lab$/, "")} ${variant}`;
+
+  return {
+    id: `daily-${format(dropDate, "yyyy-MM-dd")}-${dropIndex + 1}-${trend.title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    dailyDropDate: format(dropDate, "yyyy-MM-dd"),
+    dailyDropNumber: dropIndex + 1,
+    isDailyDrop: true,
+    title,
+    category: trend.category,
+    concept: `${trend.concept} Seasonal angle: build the promotion around ${hook}. ${dropStyle} version: ${dailyDropPositioning(dropIndex)}`,
+    whyItFits: `This gives On Par a fresh daily idea tied to ${hook} while still using the venue's games, food, drinks, karaoke, and social spaces.`,
+    bestMonths: [format(dropDate, "MMMM")],
+    bestDays: trend.days,
+    suggestedTime: trend.time,
+    estimatedTicketPrice: trend.price + dropIndex * 2,
+    estimatedAttendance: trend.attendance + dropIndex * 6,
+    intendedAudience: trend.audience,
+    foodDrinkAngle: trend.foodDrinkAngle,
+    marketingHook: `${trend.marketingHook} ${hookTitle(hook)} ${dropStyle.toLowerCase()} edition.`,
+    trendBasis: trend.trendBasis,
+    sourceLinks: trend.sourceLinks
+  };
+}
+
+function dailyDropPositioning(dropIndex: number) {
+  if (dropIndex === 0) {
+    return "make this the most polished paid-event concept with a full ticketing and prize angle.";
+  }
+  if (dropIndex === 1) {
+    return "make this easier to run as a community/social night with light staffing.";
+  }
+  return "make this food-and-beverage led so it can test menu ideas and drive per-person spend.";
 }
 
 function hookTitle(hook: string) {

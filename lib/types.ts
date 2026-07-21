@@ -234,6 +234,7 @@ export type EventIdea = {
   id: string;
   title: string;
   dailyDropDate?: string;
+  dailyDropNumber?: number;
   isDailyDrop?: boolean;
   category: EventCategory;
   concept: string;
