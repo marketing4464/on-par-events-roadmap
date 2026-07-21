@@ -21,7 +21,7 @@ import type {
   RoadmapEvent,
   ScoreFactors
 } from "./types";
-import { eventIdeas } from "./event-ideas";
+import { buildEventIdeas } from "./event-ideas";
 import { yearlyMarketingPlan } from "./yearly-marketing-plan";
 
 const today = new Date();
@@ -78,7 +78,7 @@ export function buildDashboardState(baseDate = today): DashboardState {
     recommendations,
     templates: eventTemplates,
     yearlyPlan: yearlyMarketingPlan,
-    ideas: eventIdeas,
+    ideas: buildEventIdeas(baseDate),
     researchRuns: [
       {
         id: "run-seed-001",

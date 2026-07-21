@@ -7,7 +7,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import listPlugin from "@fullcalendar/list";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { DateClickArg } from "@fullcalendar/interaction";
-import { addDays, differenceInCalendarDays, format, isPast, parseISO } from "date-fns";
+import { addDays, differenceInCalendarDays, format, isPast, isValid, parseISO } from "date-fns";
 import {
   AlertTriangle,
   Archive,
@@ -932,24 +932,34 @@ function FilterBar(props: {
 }
 
 function AnnualRoadmap({ events, onSelect }: { events: RoadmapEvent[]; onSelect: (id: string) => void }) {
-  const grouped = groupBy(events, (event) => event.date.slice(0, 7));
+  const validEvents = events.filter((event) => isValidEventDate(event.date));
+  const invalidEvents = events.length - validEvents.length;
+  const grouped = groupBy(validEvents, (event) => event.date.slice(0, 7));
   return (
-    <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {Object.entries(grouped).map(([month, monthEvents]) => (
-        <Panel key={month} title={format(parseISO(`${month}-01`), "MMMM yyyy")}>
-          <div className="grid gap-2">
-            {monthEvents.sort((a, b) => a.date.localeCompare(b.date)).map((event) => (
-              <button key={event.id} className="rounded-lg border border-[#d9dedb] p-3 text-left hover:border-moss" onClick={() => onSelect(event.id)}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-bold">{event.name}</p>
-                  <StatusBadge status={event.status} />
-                </div>
-                <p className="text-xs text-muted">{format(parseISO(event.date), "EEE, MMM d")} | {event.category} | {event.admissionType}</p>
-              </button>
-            ))}
-          </div>
-        </Panel>
-      ))}
+    <section className="grid gap-4">
+      {invalidEvents > 0 && (
+        <div className="rounded-lg border border-[#f2d4cc] bg-[#fff0ed] p-3 text-sm">
+          <p className="font-black text-[#7e251b]">Annual Roadmap skipped {invalidEvents} event{invalidEvents === 1 ? "" : "s"} with missing or invalid dates.</p>
+          <p className="text-muted">Open those events from another view and add valid dates to include them here.</p>
+        </div>
+      )}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {Object.entries(grouped).map(([month, monthEvents]) => (
+          <Panel key={month} title={safeMonthLabel(month)}>
+            <div className="grid gap-2">
+              {monthEvents.sort((a, b) => a.date.localeCompare(b.date)).map((event) => (
+                <button key={event.id} className="rounded-lg border border-[#d9dedb] p-3 text-left hover:border-moss" onClick={() => onSelect(event.id)}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-bold">{event.name}</p>
+                    <StatusBadge status={event.status} />
+                  </div>
+                  <p className="text-xs text-muted">{safeDayLabel(event.date)} | {event.category} | {event.admissionType}</p>
+                </button>
+              ))}
+            </div>
+          </Panel>
+        ))}
+      </div>
     </section>
   );
 }
@@ -1006,8 +1016,12 @@ function IdeasView({ ideas, onSchedule }: { ideas: EventIdea[]; onSchedule: (ide
   const [category, setCategory] = useState("All");
   const [month, setMonth] = useState("All");
   const [query, setQuery] = useState("");
+  const todayKey = format(new Date(), "yyyy-MM-dd");
   const months = Array.from(new Set(ideas.flatMap((idea) => idea.bestMonths)));
-  const filtered = ideas.filter((idea) => {
+  const sortedIdeas = ideas.slice().sort((a, b) => (a.dailyDropDate ?? "0000-00-00").localeCompare(b.dailyDropDate ?? "0000-00-00"));
+  const todaysIdea = sortedIdeas.find((idea) => idea.dailyDropDate === todayKey) ?? sortedIdeas.find((idea) => idea.isDailyDrop);
+  const dailyCount = ideas.filter((idea) => idea.isDailyDrop).length;
+  const filtered = sortedIdeas.filter((idea) => {
     const matchesCategory = category === "All" || idea.category === category;
     const matchesMonth = month === "All" || idea.bestMonths.includes(month);
     const matchesQuery = [idea.title, idea.concept, idea.whyItFits, idea.trendBasis, idea.marketingHook].join(" ").toLowerCase().includes(query.toLowerCase());
@@ -1018,11 +1032,23 @@ function IdeasView({ ideas, onSchedule }: { ideas: EventIdea[]; onSchedule: (ide
     <section className="grid gap-4">
       <Panel
         title="Fresh Event Ideas"
-        action={<span className="rounded-full bg-[#fff5df] px-3 py-1 text-xs font-black text-[#7a5100]">{filtered.length} ideas</span>}
+        action={<span className="rounded-full bg-[#fff5df] px-3 py-1 text-xs font-black text-[#7a5100]">{dailyCount} daily drops</span>}
       >
         <p className="text-sm text-muted">
-          These are new idea-bank concepts inspired by current event, food, beverage, social, and nightlife trends. They are separate from the events already suggested or scheduled in the roadmap. Pick one, choose a date, and schedule it manually.
+          These are new idea-bank concepts inspired by current event, food, beverage, social, and nightlife trends. They are separate from the events already suggested or scheduled in the roadmap. The Daily Idea Stream carries at least one dated idea for every day in the next rolling year.
         </p>
+        {todaysIdea && (
+          <div className="mt-4 rounded-lg border border-lime bg-[#f7ffe0] p-3">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase text-moss">Today's idea drop</p>
+                <p className="font-black">{todaysIdea.title}</p>
+                <p className="text-sm text-muted">{todaysIdea.marketingHook}</p>
+              </div>
+              <Button onClick={() => onSchedule(todaysIdea)} icon={CalendarDays}>Schedule Today's Idea</Button>
+            </div>
+          </div>
+        )}
         <div className="no-print mt-4 grid gap-3 lg:grid-cols-[1fr_180px_180px]">
           <label className="grid gap-1 text-sm font-bold">
             Search ideas
@@ -1053,6 +1079,11 @@ function IdeasView({ ideas, onSchedule }: { ideas: EventIdea[]; onSchedule: (ide
             action={<span className="rounded-full bg-[#edf8ed] px-3 py-1 text-xs font-black text-moss">{idea.category}</span>}
           >
             <div className="grid gap-3">
+              {idea.dailyDropDate && (
+                <p className="w-fit rounded-full bg-[#eef4fb] px-3 py-1 text-xs font-black text-[#294b73]">
+                  Daily drop: {format(parseISO(idea.dailyDropDate), "MMM d, yyyy")}
+                </p>
+              )}
               <p className="text-sm text-muted">{idea.concept}</p>
               <div className="grid gap-2 md:grid-cols-2">
                 <Info label="Best months" value={idea.bestMonths.join(", ")} />
@@ -1562,11 +1593,25 @@ function loadState(initialState: DashboardState) {
       templates: parsed.templates ?? initialState.templates,
       researchRuns: parsed.researchRuns ?? initialState.researchRuns,
       yearlyPlan: parsed.yearlyPlan ?? initialState.yearlyPlan,
-      ideas: parsed.ideas ?? initialState.ideas
+      ideas: initialState.ideas
     };
   } catch {
     return initialState;
   }
+}
+
+function isValidEventDate(date: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && isValid(parseISO(date));
+}
+
+function safeMonthLabel(month: string) {
+  const date = parseISO(`${month}-01`);
+  return isValid(date) ? format(date, "MMMM yyyy") : "Needs Date Review";
+}
+
+function safeDayLabel(dateString: string) {
+  const date = parseISO(dateString);
+  return isValid(date) ? format(date, "EEE, MMM d") : "Needs date";
 }
 
 function defaultScoreFactors(): ScoreFactors {

@@ -233,6 +233,8 @@ export type YearlyMarketingMonth = {
 export type EventIdea = {
   id: string;
   title: string;
+  dailyDropDate?: string;
+  isDailyDrop?: boolean;
   category: EventCategory;
   concept: string;
   whyItFits: string;
