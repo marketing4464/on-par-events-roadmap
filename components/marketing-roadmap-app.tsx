@@ -769,10 +769,16 @@ function CalendarEventModal({
   onSubmit: (formData: FormData) => void;
 }) {
   const modalTitle = date ? `Add Event for ${format(parseISO(date), "MMMM d, yyyy")}` : `Schedule: ${idea?.title ?? "Idea"}`;
-  const defaultDate = date || "";
+  const defaultDate = date || idea?.dailyDropDate || "";
   const defaultTicketPrice = String(idea?.estimatedTicketPrice ?? 15);
   const defaultAttendance = String(idea?.estimatedAttendance ?? 75);
   const defaultTime = toTimeInputValue(idea?.suggestedTime ?? "7:00 PM");
+  const defaultAgeRestriction =
+    idea?.audienceType === "Kids / Family"
+      ? "Kids / family-friendly; adult supervision recommended"
+      : idea?.audienceType === "Adults"
+        ? "21+ recommended; management to confirm"
+        : "All ages; management to confirm";
 
   return (
     <div className="no-print fixed inset-0 z-50 grid place-items-center bg-[#11251b]/70 p-4">
@@ -809,7 +815,7 @@ function CalendarEventModal({
             <FormInput name="ticketPrice" label="Ticket price" type="number" defaultValue={defaultTicketPrice} />
             <FormInput name="expectedAttendance" label="Expected attendance" type="number" defaultValue={defaultAttendance} />
             <FormInput name="audience" label="Audience" defaultValue={idea?.intendedAudience ?? "On Par guests"} />
-            <FormInput name="ageRestriction" label="Age restriction" defaultValue="Management to confirm" />
+            <FormInput name="ageRestriction" label="Age restriction" defaultValue={defaultAgeRestriction} />
             <FormInput name="owner" label="Planning owner" defaultValue="Marketing" />
             <label className="grid gap-1 text-sm font-bold">
               Planning status
@@ -1035,15 +1041,15 @@ function IdeasView({ ideas, onSchedule }: { ideas: EventIdea[]; onSchedule: (ide
         action={<span className="rounded-full bg-[#fff5df] px-3 py-1 text-xs font-black text-[#7a5100]">{dailyCount} daily drops</span>}
       >
         <p className="text-sm text-muted">
-          These are new idea-bank concepts inspired by current event, food, beverage, social, and nightlife trends. They are separate from the events already suggested or scheduled in the roadmap. The Daily Idea Stream carries at least three dated ideas for every day in the next rolling year.
+          These are new idea-bank concepts inspired by current event, food, beverage, social, family, and nightlife trends. They are separate from the events already suggested or scheduled in the roadmap. The Daily Idea Stream carries at least five dated options for every day in the next rolling year: adults, kids/family, all ages, food/drink, and creative/community.
         </p>
         {todaysIdeas.length > 0 && (
           <div className="mt-4 rounded-lg border border-lime bg-[#f7ffe0] p-3">
-            <p className="text-xs font-black uppercase text-moss">Today's 3 idea drops</p>
-            <div className="mt-3 grid gap-3 xl:grid-cols-3">
+            <p className="text-xs font-black uppercase text-moss">Today's 5 idea drops</p>
+            <div className="mt-3 grid gap-3 lg:grid-cols-2 2xl:grid-cols-5">
               {todaysIdeas.map((idea) => (
                 <div key={idea.id} className="rounded-lg border border-[#d9dedb] bg-white p-3">
-                  <p className="text-xs font-black text-muted">Idea {idea.dailyDropNumber ?? 1}</p>
+                  <p className="text-xs font-black text-muted">Idea {idea.dailyDropNumber ?? 1} | {idea.audienceType ?? "All Ages"}</p>
                   <p className="font-black">{idea.title}</p>
                   <p className="mt-1 text-sm text-muted">{idea.marketingHook}</p>
                   <div className="mt-3">
@@ -1097,6 +1103,7 @@ function IdeasView({ ideas, onSchedule }: { ideas: EventIdea[]; onSchedule: (ide
                 <Info label="Estimated price" value={`$${idea.estimatedTicketPrice}`} />
                 <Info label="Estimated attendance" value={idea.estimatedAttendance} />
                 <Info label="Audience" value={idea.intendedAudience} />
+                <Info label="Audience type" value={idea.audienceType ?? "All Ages"} />
               </div>
               <PlanList title="Why it fits On Par" items={[idea.whyItFits]} />
               <PlanList title="Food and drink angle" items={[idea.foodDrinkAngle]} />

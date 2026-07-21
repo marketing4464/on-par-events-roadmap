@@ -245,6 +245,7 @@ export type EventIdea = {
   estimatedTicketPrice: number;
   estimatedAttendance: number;
   intendedAudience: string;
+  audienceType?: "Adults" | "Kids / Family" | "All Ages";
   foodDrinkAngle: string;
   marketingHook: string;
   trendBasis: string;

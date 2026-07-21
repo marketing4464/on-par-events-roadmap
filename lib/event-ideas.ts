@@ -264,6 +264,7 @@ const curatedIdeas: EventIdea[] = [
 ];
 
 type DailyTrend = {
+  lane: "Adults" | "Kids / Family" | "All Ages";
   title: string;
   category: EventIdea["category"];
   concept: string;
@@ -280,6 +281,7 @@ type DailyTrend = {
 
 const dailyTrends: DailyTrend[] = [
   {
+    lane: "All Ages",
     title: "Dirty Soda Flight Night",
     category: "Food",
     concept: "A customizable dirty soda and refresher bar where guests build flights, name their favorite, and vote on a limited-time On Par drink.",
@@ -294,6 +296,7 @@ const dailyTrends: DailyTrend[] = [
     time: "6:30 PM"
   },
   {
+    lane: "Adults",
     title: "Wingperson Mini Golf Mixer",
     category: "Dating",
     concept: "A friend-supported dating night where guests register in pairs, rotate through casual On Par challenges, and meet other pairs without one-on-one pressure.",
@@ -308,6 +311,7 @@ const dailyTrends: DailyTrend[] = [
     time: "7:00 PM"
   },
   {
+    lane: "Adults",
     title: "Early Bird Dance & Games",
     category: "Dance Party",
     concept: "A happy-hour dance party with DJ-lite music, quick games, and no-pressure mingling that wraps before late-night plans.",
@@ -322,6 +326,7 @@ const dailyTrends: DailyTrend[] = [
     time: "5:30 PM"
   },
   {
+    lane: "All Ages",
     title: "Vinegar Spritz Lab",
     category: "Food",
     concept: "Guests taste fruit-vinegar spritzes, shrubs, and bright mocktails, then vote on a seasonal house refresher.",
@@ -336,6 +341,7 @@ const dailyTrends: DailyTrend[] = [
     time: "6:30 PM"
   },
   {
+    lane: "All Ages",
     title: "Global Sauce Passport",
     category: "Food",
     concept: "A tasting passport built around sauces, dips, and snacks from global flavor trends, with quick trivia at each station.",
@@ -350,6 +356,7 @@ const dailyTrends: DailyTrend[] = [
     time: "7:00 PM"
   },
   {
+    lane: "All Ages",
     title: "Camera Roll Scavenger Hunt",
     category: "Competition",
     concept: "Teams complete photo and video prompts throughout On Par, creating safe UGC moments and a final social vote.",
@@ -364,6 +371,7 @@ const dailyTrends: DailyTrend[] = [
     time: "7:00 PM"
   },
   {
+    lane: "Adults",
     title: "Third Place Social Club",
     category: "Mixer",
     concept: "A low-stakes meetup for solo guests and new residents with table prompts, casual team games, and rotating activity stations.",
@@ -378,6 +386,7 @@ const dailyTrends: DailyTrend[] = [
     time: "6:00 PM"
   },
   {
+    lane: "All Ages",
     title: "Micro-Tournament Night",
     category: "Competition",
     concept: "A quick-hit tournament night where teams rotate through short rounds of mini golf, darts, karaoke, and trivia bonus questions.",
@@ -392,6 +401,7 @@ const dailyTrends: DailyTrend[] = [
     time: "7:00 PM"
   },
   {
+    lane: "Adults",
     title: "Tiny Luxury Tasting",
     category: "Tasting",
     concept: "A small-plate affordable-luxury tasting with premium-feeling bites, drink pairings, and social game breaks.",
@@ -406,6 +416,7 @@ const dailyTrends: DailyTrend[] = [
     time: "6:30 PM"
   },
   {
+    lane: "All Ages",
     title: "Craft & Karaoke Club",
     category: "Mixer",
     concept: "A hands-on craft or DIY station followed by optional karaoke, letting guests socialize around making before performing.",
@@ -420,6 +431,7 @@ const dailyTrends: DailyTrend[] = [
     time: "5:30 PM"
   },
   {
+    lane: "All Ages",
     title: "Mood Menu Game Night",
     category: "Food",
     concept: "Guests choose a food/drink flight based on their mood, then join matching activity zones like chill, chaos, cozy, or competitive.",
@@ -434,6 +446,7 @@ const dailyTrends: DailyTrend[] = [
     time: "7:00 PM"
   },
   {
+    lane: "Adults",
     title: "Low-Stakes Singles Brunch",
     category: "Dating",
     concept: "A Sunday social with brunch snacks, conversation cards, and optional activity matching instead of high-pressure speed dating.",
@@ -445,6 +458,81 @@ const dailyTrends: DailyTrend[] = [
     attendance: 64,
     audience: "Singles, friend groups, brunch crowd",
     days: ["Sunday"],
+    time: "12:00 PM"
+  },
+  {
+    lane: "Kids / Family",
+    title: "Mini Golf Mascot Quest",
+    category: "Competition",
+    concept: "Kids and families complete a silly quest card around mini golf, bowling, and photo clues, then turn it in for a small prize drawing.",
+    foodDrinkAngle: "Kid-friendly snack packs, lemonade refreshers, and parent coffee/mocktail options.",
+    marketingHook: "A quest card, a prize jar, and an afternoon out of the house.",
+    trendBasis: "Family-friendly experiential events work well when they are structured, affordable, and easy for parents to understand.",
+    sourceLinks: [sourceLinks.cvent, sourceLinks.eventbriteSocial],
+    price: 10,
+    attendance: 90,
+    audience: "Families with kids, school-break groups, grandparents",
+    days: ["Saturday", "Sunday"],
+    time: "1:00 PM"
+  },
+  {
+    lane: "Kids / Family",
+    title: "Junior Game Show Afternoon",
+    category: "Competition",
+    concept: "A kid-friendly game show with simple rounds, team buzzers, picture clues, and parent-child mini challenges.",
+    foodDrinkAngle: "Pizza slices, popcorn, colorful mocktails, and dessert prize cups.",
+    marketingHook: "Let the kids be contestants for the day.",
+    trendBasis: "Interactive family programming gives venues a daytime use case and content-friendly moments.",
+    sourceLinks: [sourceLinks.cvent, sourceLinks.genZEvents],
+    price: 12,
+    attendance: 80,
+    audience: "Kids 6-12, families, birthday groups",
+    days: ["Saturday", "Sunday"],
+    time: "2:00 PM"
+  },
+  {
+    lane: "Kids / Family",
+    title: "Family Karaoke Matinee",
+    category: "Mixer",
+    concept: "A daytime karaoke event with Disney-style singalong energy, clean playlists, family bingo cards, and low-pressure stage moments.",
+    foodDrinkAngle: "Shareable family platters, dessert boards, and colorful alcohol-free drinks.",
+    marketingHook: "Big songs before bedtime.",
+    trendBasis: "Daytime entertainment and family-friendly versions of adult formats help widen event audiences.",
+    sourceLinks: [sourceLinks.softPartying, sourceLinks.cvent],
+    price: 8,
+    attendance: 75,
+    audience: "Families, kids, grandparents, birthday groups",
+    days: ["Sunday"],
+    time: "3:00 PM"
+  },
+  {
+    lane: "Kids / Family",
+    title: "Parent & Kid Puzzle Dash",
+    category: "Competition",
+    concept: "Parent-child teams solve small puzzles, complete quick arcade-style challenges, and earn stamps toward a prize drawing.",
+    foodDrinkAngle: "Snack boxes, coffee for parents, and kid refresher flights.",
+    marketingHook: "Team up with your favorite small strategist.",
+    trendBasis: "Puzzle and challenge formats are easy to package for families and repeat during school breaks.",
+    sourceLinks: [sourceLinks.genZEvents, sourceLinks.eventbriteSocial],
+    price: 14,
+    attendance: 70,
+    audience: "Families with kids 7-13",
+    days: ["Saturday", "Sunday"],
+    time: "11:00 AM"
+  },
+  {
+    lane: "Kids / Family",
+    title: "Little Chefs Snack Lab",
+    category: "Food",
+    concept: "A guided kid-friendly snack-building event where families make mini dessert cups, snack boards, or mocktail garnishes.",
+    foodDrinkAngle: "Build-your-own snack cups, lemonade refreshers, and parent add-on drinks after ID check.",
+    marketingHook: "Tiny chefs, big opinions.",
+    trendBasis: "Hands-on food experiences and customizable drinks translate well into family formats.",
+    sourceLinks: [sourceLinks.foodBeverage, sourceLinks.cvent],
+    price: 16,
+    attendance: 60,
+    audience: "Kids, families, birthday groups",
+    days: ["Saturday", "Sunday"],
     time: "12:00 PM"
   }
 ];
@@ -466,20 +554,22 @@ const monthlySeasonalHooks: Record<number, string[]> = {
 
 function buildDailyIdeaDrops(baseDate: Date): EventIdea[] {
   return Array.from({ length: 365 }).flatMap((_, dayIndex) => {
-    return [0, 1, 2].map((dropIndex) => createDailyIdeaDrop(baseDate, dayIndex, dropIndex));
+    return [0, 1, 2, 3, 4].map((dropIndex) => createDailyIdeaDrop(baseDate, dayIndex, dropIndex));
   });
 }
 
 function createDailyIdeaDrop(baseDate: Date, dayIndex: number, dropIndex: number): EventIdea {
-  const index = dayIndex * 3 + dropIndex;
-  const dropStyles = ["Signature", "Social", "Food & Drink"];
-  const variants = ["Challenge", "Social", "Lab", "Night", "Tournament", "Club"];
+  const index = dayIndex * 5 + dropIndex;
+  const lanes = ["Adults", "Kids / Family", "All Ages", "Food & Drink", "Creative / Community"];
+  const laneMatchers = ["Adults", "Kids / Family", "All Ages", "All Ages", "All Ages"];
+  const variants = ["After Dark", "Matinee", "Tournament", "Tasting", "Workshop"];
   const dropDate = addDays(baseDate, dayIndex);
-  const trend = dailyTrends[index % dailyTrends.length];
+  const trendPool = dailyTrends.filter((trend) => trend.lane === laneMatchers[dropIndex]);
+  const trend = trendPool[(dayIndex + dropIndex) % trendPool.length] ?? dailyTrends[index % dailyTrends.length];
   const seasonalHooks = monthlySeasonalHooks[dropDate.getMonth()] ?? ["social connection"];
   const hook = seasonalHooks[index % seasonalHooks.length];
   const variant = variants[index % variants.length];
-  const dropStyle = dropStyles[dropIndex];
+  const dropStyle = lanes[dropIndex];
   const title = `${hookTitle(hook)} ${trend.title.replace(/ Night$| Club$| Lab$/, "")} ${variant}`;
 
   return {
@@ -497,8 +587,9 @@ function createDailyIdeaDrop(baseDate: Date, dayIndex: number, dropIndex: number
     estimatedTicketPrice: trend.price + dropIndex * 2,
     estimatedAttendance: trend.attendance + dropIndex * 6,
     intendedAudience: trend.audience,
+    audienceType: dropIndex === 0 ? "Adults" : dropIndex === 1 ? "Kids / Family" : "All Ages",
     foodDrinkAngle: trend.foodDrinkAngle,
-    marketingHook: `${trend.marketingHook} ${hookTitle(hook)} ${dropStyle.toLowerCase()} edition.`,
+    marketingHook: `${trend.marketingHook} ${hookTitle(hook)} ${dropStyle.toLowerCase()} option.`,
     trendBasis: trend.trendBasis,
     sourceLinks: trend.sourceLinks
   };
@@ -506,12 +597,18 @@ function createDailyIdeaDrop(baseDate: Date, dayIndex: number, dropIndex: number
 
 function dailyDropPositioning(dropIndex: number) {
   if (dropIndex === 0) {
-    return "make this the most polished paid-event concept with a full ticketing and prize angle.";
+    return "position this as an adult-focused evening with stronger ticketing, date-night, or social energy.";
   }
   if (dropIndex === 1) {
-    return "make this easier to run as a community/social night with light staffing.";
+    return "position this as a kid/family-friendly daytime option with simple rules and parent-friendly pricing.";
   }
-  return "make this food-and-beverage led so it can test menu ideas and drive per-person spend.";
+  if (dropIndex === 2) {
+    return "position this as an all-ages competitive activity with teams, prizes, and easy repeatability.";
+  }
+  if (dropIndex === 3) {
+    return "position this as a food-and-beverage led concept that can test menu ideas and increase per-person spend.";
+  }
+  return "position this as a creative, community, or partner-friendly event with content and collaboration potential.";
 }
 
 function hookTitle(hook: string) {
