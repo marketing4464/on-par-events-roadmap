@@ -18,6 +18,7 @@ import type {
   EventReport,
   EventTask,
   EventTemplate,
+  PostingDestination,
   RoadmapEvent,
   ScoreFactors
 } from "./types";
@@ -60,6 +61,65 @@ export const denialReasons = [
   "Other"
 ];
 
+export const defaultPostingDestinations: PostingDestination[] = [
+  {
+    id: "eventbrite",
+    name: "Eventbrite",
+    url: "https://www.eventbrite.com/",
+    channelType: "Ticketing",
+    notes: "Ticketing/listing page for paid events and RSVP-style events.",
+    supportsDirectPosting: false
+  },
+  {
+    id: "facebook",
+    name: "Facebook",
+    url: "https://www.facebook.com/",
+    channelType: "Social",
+    notes: "Facebook event page, organic posts, and event reminders.",
+    supportsDirectPosting: false
+  },
+  {
+    id: "dayton-local",
+    name: "Dayton Local",
+    url: "https://www.daytonlocal.com/",
+    channelType: "Local Media",
+    notes: "Local events calendar submission for Dayton-area discovery.",
+    supportsDirectPosting: false
+  },
+  {
+    id: "dayton937",
+    name: "Dayton937",
+    url: "https://dayton937.com/",
+    channelType: "Local Media",
+    notes: "Local entertainment/event listing and editorial opportunity.",
+    supportsDirectPosting: false
+  },
+  {
+    id: "instagram",
+    name: "Instagram",
+    url: "https://www.instagram.com/",
+    channelType: "Social",
+    notes: "Feed post, Reel, Story, and reminder content.",
+    supportsDirectPosting: false
+  },
+  {
+    id: "destination-dayton",
+    name: "Destination Dayton",
+    url: "https://www.destinationdayton.org/",
+    channelType: "Tourism",
+    notes: "Visitor-facing event listing and tourism partner visibility.",
+    supportsDirectPosting: false
+  },
+  {
+    id: "ope-tvs",
+    name: "OPE TVs",
+    url: "",
+    channelType: "In Venue",
+    notes: "Internal screen rotation for TVs and in-venue promotion.",
+    supportsDirectPosting: false
+  }
+];
+
 export function getFirstWeekday(year: number, monthIndex: number, weekday: number) {
   const first = startOfMonth(new Date(year, monthIndex, 1));
   const offset = (weekday - getDay(first) + 7) % 7;
@@ -79,6 +139,7 @@ export function buildDashboardState(baseDate = today): DashboardState {
     templates: eventTemplates,
     yearlyPlan: yearlyMarketingPlan,
     ideas: buildEventIdeas(baseDate),
+    postingDestinations: defaultPostingDestinations,
     researchRuns: [
       {
         id: "run-seed-001",
@@ -98,6 +159,18 @@ export function buildDashboardState(baseDate = today): DashboardState {
       }
     ]
   };
+}
+
+export function createPostingChecklist(destinations = defaultPostingDestinations) {
+  return destinations.map((destination) => ({
+    id: `posting-${destination.id}`,
+    destinationId: destination.id,
+    label: destination.name,
+    url: destination.url,
+    channelType: destination.channelType,
+    posted: false,
+    notes: destination.notes
+  }));
 }
 
 export function buildRollingEvents(baseDate: Date) {
@@ -155,6 +228,8 @@ function createRecurringEvent(category: "Trivia" | "Bingo", date: Date, ruleId: 
     internalOrPartner: "Internal",
     source: "Recurring Rule",
     warnings: [],
+    promoImages: [],
+    postingChecklist: createPostingChecklist(),
     report: createEventReport(name, category, date, 0),
     tasks: createMarketingTasks(date, "Small"),
     budget: createBudget(45, 0),
@@ -186,6 +261,8 @@ function createPaidPlaceholder(date: Date, idea: PaidIdea, index: number): Roadm
     internalOrPartner: "Internal",
     source: "Seed Example",
     warnings: [],
+    promoImages: [],
+    postingChecklist: createPostingChecklist(),
     report: createEventReport(idea.name, idea.category, date, idea.price),
     tasks: createMarketingTasks(date, "Standard"),
     budget: createBudget(idea.attendance, idea.price),
@@ -230,6 +307,8 @@ function createAnniversaryEvent(date: Date): RoadmapEvent {
     ],
     isMajor: true,
     isAnniversary: true,
+    promoImages: [],
+    postingChecklist: createPostingChecklist(),
     report: createAnniversaryReport(name, date, anniversaryNumber),
     tasks: createMarketingTasks(date, "Anniversary"),
     budget: createBudget(220, 15),

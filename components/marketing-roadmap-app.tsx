@@ -16,8 +16,10 @@ import {
   ClipboardList,
   DollarSign,
   Download,
+  ExternalLink,
   FileText,
   Filter,
+  ImagePlus,
   Inbox,
   LayoutDashboard,
   Plus,
@@ -26,16 +28,19 @@ import {
   Save,
   Search,
   Settings,
+  Trash2,
   Upload,
   XCircle
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 import {
   checkConflicts,
   createBudget,
   createEventReport,
   createMarketingTasks,
+  createPostingChecklist,
+  defaultPostingDestinations,
   denialReasons,
   eventStatuses,
   recommendationToEvent
@@ -44,9 +49,12 @@ import type {
   DashboardState,
   EventIdea,
   EventCategory,
+  EventPostingChecklistItem,
+  EventPromoImage,
   EventRecommendation,
   EventStatus,
   EventTask,
+  PostingDestination,
   RoadmapEvent,
   ScoreFactors
 } from "@/lib/types";
@@ -88,6 +96,7 @@ type ActivePage =
   | "Master Calendar"
   | "Annual Roadmap"
   | "Yearly Marketing Plan"
+  | "Posting Pages"
   | "Ideas"
   | "Recommendation Inbox"
   | "Event Research"
@@ -105,6 +114,7 @@ const navItems: Array<{ label: ActivePage; icon: React.ElementType }> = [
   { label: "Master Calendar", icon: CalendarDays },
   { label: "Annual Roadmap", icon: CalendarDays },
   { label: "Yearly Marketing Plan", icon: Filter },
+  { label: "Posting Pages", icon: ExternalLink },
   { label: "Ideas", icon: Plus },
   { label: "Recommendation Inbox", icon: Inbox },
   { label: "Event Research", icon: Search },
@@ -154,6 +164,47 @@ const statusColors: Record<string, string> = {
   Archived: "#7a827f"
 };
 
+function normalizePostingDestinations(destinations?: PostingDestination[]) {
+  const savedById = new Map((destinations ?? []).map((destination) => [destination.id, destination]));
+  const defaultIds = new Set(defaultPostingDestinations.map((destination) => destination.id));
+  const customDestinations = (destinations ?? []).filter((destination) => !defaultIds.has(destination.id));
+
+  return [
+    ...defaultPostingDestinations.map((destination) => ({
+      ...destination,
+      ...savedById.get(destination.id)
+    })),
+    ...customDestinations
+  ];
+}
+
+function mergePostingChecklist(checklist: EventPostingChecklistItem[] | undefined, destinations: PostingDestination[]) {
+  const checklistByDestination = new Map((checklist ?? []).map((item) => [item.destinationId, item]));
+
+  return destinations.map((destination) => {
+    const saved = checklistByDestination.get(destination.id);
+    return {
+      id: saved?.id ?? `posting-${destination.id}`,
+      destinationId: destination.id,
+      label: destination.name,
+      url: destination.url,
+      channelType: destination.channelType,
+      posted: saved?.posted ?? false,
+      postedAt: saved?.postedAt,
+      postUrl: saved?.postUrl,
+      notes: saved?.notes ?? destination.notes
+    };
+  });
+}
+
+function normalizeEvent(event: RoadmapEvent, destinations: PostingDestination[]) {
+  return {
+    ...event,
+    promoImages: event.promoImages ?? [],
+    postingChecklist: mergePostingChecklist(event.postingChecklist, destinations)
+  };
+}
+
 export function MarketingRoadmapApp({ initialState }: { initialState: DashboardState }) {
   const [state, setState] = useState<DashboardState>(() => loadState(initialState));
   const [activePage, setActivePage] = useState<ActivePage>("Dashboard");
@@ -200,6 +251,18 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
     const nextEvents = state.events.map((event) => (event.id === eventId ? { ...event, ...updates } : event));
     const rechecked = nextEvents.map((event) => ({ ...event, warnings: checkConflicts(event, nextEvents) }));
     persist({ ...state, events: rechecked }, successMessage);
+  }
+
+  function updatePostingDestination(destinationId: string, updates: Partial<PostingDestination>) {
+    const nextDestinations = state.postingDestinations.map((destination) =>
+      destination.id === destinationId ? { ...destination, ...updates } : destination
+    );
+    const nextEvents = state.events.map((event) => ({
+      ...event,
+      postingChecklist: mergePostingChecklist(event.postingChecklist, nextDestinations)
+    }));
+    const destinationName = nextDestinations.find((destination) => destination.id === destinationId)?.name ?? "Posting page";
+    persist({ ...state, postingDestinations: nextDestinations, events: nextEvents }, `${destinationName} posting page saved.`);
   }
 
   function handleCalendarDateClick(info: DateClickArg) {
@@ -255,6 +318,8 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
       internalOrPartner: "Internal",
       source: "Manual",
       warnings: [],
+      promoImages: [],
+      postingChecklist: createPostingChecklist(state.postingDestinations),
       report: createEventReport(data.name, data.category as EventCategory, date, data.ticketPrice),
       tasks: createMarketingTasks(date, eventSize),
       budget: createBudget(data.expectedAttendance, data.admissionType === "Paid" ? data.ticketPrice : 0),
@@ -690,6 +755,8 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
 
           {activePage === "Yearly Marketing Plan" && <YearlyMarketingPlanView plan={state.yearlyPlan} />}
 
+          {activePage === "Posting Pages" && <PostingPagesView destinations={state.postingDestinations} onUpdate={updatePostingDestination} />}
+
           {activePage === "Ideas" && <IdeasView ideas={state.ideas} onSchedule={setIdeaToSchedule} />}
 
           {activePage === "Recommendation Inbox" && (
@@ -715,7 +782,7 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
           )}
 
           {activePage === "Event Reports" && selectedEvent && (
-            <EventReportView event={selectedEvent} onUpdate={updateEvent} onPrint={() => window.print()} />
+            <EventReportView event={selectedEvent} postingDestinations={state.postingDestinations} onUpdate={updateEvent} onPrint={() => window.print()} />
           )}
 
           {activePage === "Marketing Timeline" && <TimelineView events={state.events} tasks={tasks} />}
@@ -1018,6 +1085,75 @@ function YearlyMarketingPlanView({ plan }: { plan: DashboardState["yearlyPlan"] 
   );
 }
 
+function PostingPagesView({
+  destinations,
+  onUpdate
+}: {
+  destinations: PostingDestination[];
+  onUpdate: (destinationId: string, updates: Partial<PostingDestination>) => void;
+}) {
+  return (
+    <section className="grid gap-4">
+      <Panel
+        title="Posting Pages"
+        action={<span className="rounded-full bg-[#edf8ed] px-3 py-1 text-xs font-black text-moss">{destinations.length} channels</span>}
+      >
+        <p className="text-sm text-muted">
+          Keep the destination list current here. Each event packet uses these same pages as its posting checklist, including the in-venue OPE TVs reminder.
+        </p>
+      </Panel>
+
+      <div className="grid gap-4 xl:grid-cols-2">
+        {destinations.map((destination) => (
+          <Panel
+            key={destination.id}
+            title={destination.name}
+            action={<span className="rounded-full bg-[#eef4fb] px-3 py-1 text-xs font-black text-[#294b73]">{destination.channelType}</span>}
+          >
+            <div className="grid gap-3">
+              <FormInput label="Page name" value={destination.name} onChange={(value) => onUpdate(destination.id, { name: value })} />
+              <FormInput label="Page or submission URL" value={destination.url} onChange={(value) => onUpdate(destination.id, { url: value })} />
+              <label className="grid gap-1 text-sm font-bold">
+                Channel type
+                <select
+                  className="rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal"
+                  value={destination.channelType}
+                  onChange={(event) => onUpdate(destination.id, { channelType: event.target.value as PostingDestination["channelType"] })}
+                >
+                  {["Ticketing", "Social", "Local Media", "Tourism", "In Venue"].map((channel) => <option key={channel}>{channel}</option>)}
+                </select>
+              </label>
+              <label className="grid gap-1 text-sm font-bold">
+                Notes
+                <textarea
+                  className="min-h-20 rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal"
+                  value={destination.notes}
+                  onChange={(event) => onUpdate(destination.id, { notes: event.target.value })}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {destination.url && (
+                  <a
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#cbd3cf] bg-white px-3 py-2 text-sm font-black text-ink transition hover:border-moss hover:text-moss"
+                    href={destination.url}
+                    target="_blank"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open Page
+                  </a>
+                )}
+                <span className="inline-flex items-center rounded-lg border border-[#d9dedb] bg-sand px-3 py-2 text-xs font-bold text-muted">
+                  Direct posting pending account connection
+                </span>
+              </div>
+            </div>
+          </Panel>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function IdeasView({ ideas, onSchedule }: { ideas: EventIdea[]; onSchedule: (idea: EventIdea) => void }) {
   const [category, setCategory] = useState("All");
   const [month, setMonth] = useState("All");
@@ -1253,12 +1389,73 @@ function ResearchView(props: {
   );
 }
 
-function EventReportView({ event, onUpdate, onPrint }: { event: RoadmapEvent; onUpdate: (id: string, updates: Partial<RoadmapEvent>, message?: string) => void; onPrint: () => void }) {
-  const [draft, setDraft] = useState(event);
+function EventReportView({
+  event,
+  postingDestinations,
+  onUpdate,
+  onPrint
+}: {
+  event: RoadmapEvent;
+  postingDestinations: PostingDestination[];
+  onUpdate: (id: string, updates: Partial<RoadmapEvent>, message?: string) => void;
+  onPrint: () => void;
+}) {
+  const [draft, setDraft] = useState(() => normalizeEvent(event, postingDestinations));
+  const [uploadError, setUploadError] = useState("");
   const report = draft.report;
+
+  useEffect(() => {
+    setDraft(normalizeEvent(event, postingDestinations));
+    setUploadError("");
+  }, [event, postingDestinations]);
 
   function save() {
     onUpdate(event.id, draft, `${draft.name} report saved.`);
+  }
+
+  async function addPromoImages(files: FileList | null) {
+    const incomingFiles = Array.from(files ?? []).filter((file) => file.type.startsWith("image/"));
+    if (incomingFiles.length === 0) return;
+
+    setUploadError("");
+    try {
+      const images = await Promise.all(incomingFiles.map(createPromoImage));
+      setDraft((current) => ({
+        ...current,
+        promoImages: [...current.promoImages, ...images]
+      }));
+    } catch (error) {
+      setUploadError(error instanceof Error ? error.message : "Unable to upload image.");
+    }
+  }
+
+  function updatePromoImage(imageId: string, updates: Partial<EventPromoImage>) {
+    setDraft((current) => ({
+      ...current,
+      promoImages: current.promoImages.map((image) => (image.id === imageId ? { ...image, ...updates } : image))
+    }));
+  }
+
+  function removePromoImage(imageId: string) {
+    setDraft((current) => ({
+      ...current,
+      promoImages: current.promoImages.filter((image) => image.id !== imageId)
+    }));
+  }
+
+  function updatePostingItem(itemId: string, updates: Partial<EventPostingChecklistItem>) {
+    setDraft((current) => ({
+      ...current,
+      postingChecklist: current.postingChecklist.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              ...updates,
+              postedAt: updates.posted === true ? new Date().toISOString() : updates.posted === false ? undefined : item.postedAt
+            }
+          : item
+      )
+    }));
   }
 
   return (
@@ -1284,6 +1481,16 @@ function EventReportView({ event, onUpdate, onPrint }: { event: RoadmapEvent; on
         </label>
       </Panel>
 
+      <PromoImagesPanel
+        images={draft.promoImages}
+        uploadError={uploadError}
+        onAddImages={addPromoImages}
+        onUpdateImage={updatePromoImage}
+        onRemoveImage={removePromoImage}
+      />
+
+      <PostingChecklistPanel checklist={draft.postingChecklist} onUpdate={updatePostingItem} />
+
       <div className="grid gap-4 xl:grid-cols-2">
         <ReportSection title="A. Event Overview" items={Object.entries(report.overview).map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`)} />
         <ReportSection title="B. Why This Fits On Par" items={report.brandFit} />
@@ -1304,6 +1511,171 @@ function EventReportView({ event, onUpdate, onPrint }: { event: RoadmapEvent; on
       </div>
     </section>
   );
+}
+
+function PromoImagesPanel({
+  images,
+  uploadError,
+  onAddImages,
+  onUpdateImage,
+  onRemoveImage
+}: {
+  images: EventPromoImage[];
+  uploadError: string;
+  onAddImages: (files: FileList | null) => void;
+  onUpdateImage: (imageId: string, updates: Partial<EventPromoImage>) => void;
+  onRemoveImage: (imageId: string) => void;
+}) {
+  return (
+    <Panel
+      title="Promo Images"
+      action={<span className="rounded-full bg-[#eef4fb] px-3 py-1 text-xs font-black text-[#294b73]">{images.length} uploaded</span>}
+    >
+      <div className="grid gap-3">
+        <label className="no-print flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[#9fb3a8] bg-[#f7fbf8] p-5 text-center text-sm font-bold transition hover:border-moss hover:text-moss">
+          <ImagePlus className="h-6 w-6" />
+          Upload promo images for this event
+          <input className="sr-only" type="file" accept="image/*" multiple onChange={(event) => onAddImages(event.target.files)} />
+        </label>
+        <p className="text-xs text-muted">Images are saved inside this editable roadmap draft and can be used as reference art for Eventbrite, social posts, and OPE TVs.</p>
+        {uploadError && <p className="rounded-lg bg-[#fff0ed] p-2 text-sm font-bold text-[#7e251b]">{uploadError}</p>}
+        {images.length === 0 ? (
+          <EmptyState title="No promo images yet" detail="Upload flyers, post graphics, menu images, or TV slides for this event." />
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {images.map((image) => (
+              <div key={image.id} className="rounded-lg border border-[#d9dedb] p-3">
+                <img className="aspect-video w-full rounded-lg object-cover" src={image.dataUrl} alt={image.altText || image.fileName} />
+                <p className="mt-2 truncate text-sm font-black">{image.fileName}</p>
+                <p className="text-xs text-muted">Uploaded {format(parseISO(image.uploadedAt), "MMM d, yyyy h:mm a")}</p>
+                <div className="mt-3 grid gap-2">
+                  <FormInput label="Alt text / description" value={image.altText ?? ""} onChange={(value) => onUpdateImage(image.id, { altText: value })} />
+                  <label className="grid gap-1 text-sm font-bold">
+                    Notes
+                    <textarea
+                      className="min-h-16 rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal"
+                      value={image.notes ?? ""}
+                      onChange={(event) => onUpdateImage(image.id, { notes: event.target.value })}
+                    />
+                  </label>
+                  <Button type="button" icon={Trash2} onClick={() => onRemoveImage(image.id)}>Remove Image</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </Panel>
+  );
+}
+
+function PostingChecklistPanel({
+  checklist,
+  onUpdate
+}: {
+  checklist: EventPostingChecklistItem[];
+  onUpdate: (itemId: string, updates: Partial<EventPostingChecklistItem>) => void;
+}) {
+  const postedCount = checklist.filter((item) => item.posted).length;
+
+  return (
+    <Panel
+      title="Posting Checklist"
+      action={<span className="rounded-full bg-[#fff5df] px-3 py-1 text-xs font-black text-[#7a5100]">{postedCount}/{checklist.length} posted</span>}
+    >
+      <p className="text-sm text-muted">
+        Track where this event has been posted. Use the page links for now; direct posting can be connected later once the accounts/API access are set up.
+      </p>
+      <div className="mt-4 grid gap-3 xl:grid-cols-2">
+        {checklist.map((item) => (
+          <div key={item.id} className="rounded-lg border border-[#d9dedb] p-3">
+            <div className="flex items-start justify-between gap-3">
+              <label className="flex items-start gap-3 text-sm font-bold">
+                <input
+                  className="mt-1 h-4 w-4 accent-moss"
+                  type="checkbox"
+                  checked={item.posted}
+                  onChange={(event) => onUpdate(item.id, { posted: event.target.checked })}
+                />
+                <span>
+                  <span className="block text-base font-black">{item.label}</span>
+                  <span className="text-xs text-muted">{item.channelType}</span>
+                </span>
+              </label>
+              {item.postedAt && <span className="rounded-full bg-[#edf8ed] px-2 py-1 text-xs font-black text-moss">{format(parseISO(item.postedAt), "MMM d")}</span>}
+            </div>
+            <div className="mt-3 grid gap-2">
+              <FormInput label="Live post URL" value={item.postUrl ?? ""} onChange={(value) => onUpdate(item.id, { postUrl: value })} />
+              <label className="grid gap-1 text-sm font-bold">
+                Notes
+                <textarea
+                  className="min-h-16 rounded-lg border border-[#cbd3cf] px-3 py-2 font-normal"
+                  value={item.notes ?? ""}
+                  onChange={(event) => onUpdate(item.id, { notes: event.target.value })}
+                />
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {item.url && (
+                  <a
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#cbd3cf] bg-white px-3 py-2 text-sm font-black text-ink transition hover:border-moss hover:text-moss"
+                    href={item.url}
+                    target="_blank"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open {item.label}
+                  </a>
+                )}
+                <Button type="button" disabled title="Direct posting will be enabled after this account is connected.">Direct Post</Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Panel>
+  );
+}
+
+async function createPromoImage(file: File): Promise<EventPromoImage> {
+  if (file.size > 8 * 1024 * 1024) {
+    throw new Error(`${file.name} is over 8MB. Use a smaller promo image so the roadmap draft can save it.`);
+  }
+
+  const dataUrl = await resizeImageFile(file);
+  return {
+    id: `promo-${Date.now()}-${crypto.randomUUID()}`,
+    fileName: file.name,
+    dataUrl,
+    uploadedAt: new Date().toISOString(),
+    altText: file.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ")
+  };
+}
+
+function resizeImageFile(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error(`Unable to read ${file.name}.`));
+    reader.onload = () => {
+      const source = String(reader.result);
+      const image = new Image();
+      image.onerror = () => resolve(source);
+      image.onload = () => {
+        const maxDimension = 1400;
+        const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(image.width * scale));
+        canvas.height = Math.max(1, Math.round(image.height * scale));
+        const context = canvas.getContext("2d");
+        if (!context) {
+          resolve(source);
+          return;
+        }
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL(file.type === "image/png" ? "image/png" : "image/jpeg", 0.84));
+      };
+      image.src = source;
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 function TimelineView({ events, tasks }: { events: RoadmapEvent[]; tasks: Array<EventTask & { eventName: string }> }) {
@@ -1594,21 +1966,35 @@ function EmptyState({ title, detail }: { title: string; detail: string }) {
 function loadState(initialState: DashboardState) {
   if (typeof window === "undefined") return initialState;
   const saved = localStorage.getItem(storageKey);
-  if (!saved) return initialState;
+  if (!saved) {
+    const destinations = normalizePostingDestinations(initialState.postingDestinations);
+    return {
+      ...initialState,
+      postingDestinations: destinations,
+      events: initialState.events.map((event) => normalizeEvent(event, destinations))
+    };
+  }
   try {
     const parsed = JSON.parse(saved) as Partial<DashboardState>;
+    const destinations = normalizePostingDestinations(parsed.postingDestinations ?? initialState.postingDestinations);
     return {
       ...initialState,
       ...parsed,
-      events: parsed.events ?? initialState.events,
+      events: (parsed.events ?? initialState.events).map((event) => normalizeEvent(event, destinations)),
       recommendations: parsed.recommendations ?? initialState.recommendations,
       templates: parsed.templates ?? initialState.templates,
       researchRuns: parsed.researchRuns ?? initialState.researchRuns,
       yearlyPlan: parsed.yearlyPlan ?? initialState.yearlyPlan,
-      ideas: initialState.ideas
+      ideas: initialState.ideas,
+      postingDestinations: destinations
     };
   } catch {
-    return initialState;
+    const destinations = normalizePostingDestinations(initialState.postingDestinations);
+    return {
+      ...initialState,
+      postingDestinations: destinations,
+      events: initialState.events.map((event) => normalizeEvent(event, destinations))
+    };
   }
 }
 

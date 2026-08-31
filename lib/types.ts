@@ -71,6 +71,8 @@ export type RoadmapEvent = {
   warnings: ConflictWarning[];
   isMajor?: boolean;
   isAnniversary?: boolean;
+  promoImages: EventPromoImage[];
+  postingChecklist: EventPostingChecklistItem[];
   report: EventReport;
   tasks: EventTask[];
   budget: BudgetScenario[];
@@ -111,6 +113,36 @@ export type EventTask = {
   stage: MarketingStage | "Operations" | "Approval" | "Post Event";
   owner: string;
   status: "Todo" | "In Progress" | "Blocked" | "Done" | "Overdue";
+};
+
+export type PostingDestination = {
+  id: string;
+  name: string;
+  url: string;
+  channelType: "Ticketing" | "Social" | "Local Media" | "Tourism" | "In Venue";
+  notes: string;
+  supportsDirectPosting: boolean;
+};
+
+export type EventPostingChecklistItem = {
+  id: string;
+  destinationId: string;
+  label: string;
+  url: string;
+  channelType: PostingDestination["channelType"];
+  posted: boolean;
+  postedAt?: string;
+  postUrl?: string;
+  notes?: string;
+};
+
+export type EventPromoImage = {
+  id: string;
+  fileName: string;
+  dataUrl: string;
+  uploadedAt: string;
+  altText?: string;
+  notes?: string;
 };
 
 export type ConflictWarning = {
@@ -259,4 +291,5 @@ export type DashboardState = {
   researchRuns: ResearchRun[];
   yearlyPlan: YearlyMarketingMonth[];
   ideas: EventIdea[];
+  postingDestinations: PostingDestination[];
 };
