@@ -12,8 +12,10 @@ import {
   AlertTriangle,
   Archive,
   CalendarDays,
+  ChevronDown,
   CheckCircle2,
   ClipboardList,
+  Dices,
   DollarSign,
   Download,
   ExternalLink,
@@ -22,6 +24,7 @@ import {
   ImagePlus,
   Inbox,
   LayoutDashboard,
+  Monitor,
   Plus,
   Printer,
   RefreshCw,
@@ -32,8 +35,9 @@ import {
   Upload,
   XCircle
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { z } from "zod";
+import { BingoWorkspace } from "@/components/bingo-workspace";
 import {
   checkConflicts,
   createBudget,
@@ -97,6 +101,7 @@ type ActivePage =
   | "Annual Roadmap"
   | "Yearly Marketing Plan"
   | "Posting Pages"
+  | "Bingo"
   | "Ideas"
   | "Recommendation Inbox"
   | "Event Research"
@@ -208,6 +213,7 @@ function normalizeEvent(event: RoadmapEvent, destinations: PostingDestination[])
 export function MarketingRoadmapApp({ initialState }: { initialState: DashboardState }) {
   const [state, setState] = useState<DashboardState>(() => loadState(initialState));
   const [activePage, setActivePage] = useState<ActivePage>("Dashboard");
+  const [bingoMenuOpen, setBingoMenuOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string>(state.events[0]?.id ?? "");
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -668,20 +674,66 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
 
       <div className="grid lg:grid-cols-[270px_minmax(0,1fr)]">
         <aside className="no-print border-b border-[#d9dedb] bg-white p-4 shadow-panel lg:min-h-screen lg:border-b-0 lg:border-r">
-          <nav className="grid gap-2">
+          <nav aria-label="Main navigation" className="grid gap-2">
             {navItems.map((item) => {
               const Icon = item.icon;
               return (
-                <button
-                  key={item.label}
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-bold transition ${
-                    activePage === item.label ? "border-moss bg-[#edf8ed] text-moss" : "border-transparent hover:border-[#d9dedb] hover:bg-sand"
-                  }`}
-                  onClick={() => setActivePage(item.label)}
-                >
-                  <Icon className="h-4 w-4" />
-                  {item.label}
-                </button>
+                <Fragment key={item.label}>
+                  <button
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-bold transition ${
+                      activePage === item.label ? "border-moss bg-[#edf8ed] text-moss" : "border-transparent hover:border-[#d9dedb] hover:bg-sand"
+                    }`}
+                    onClick={() => setActivePage(item.label)}
+                    aria-current={activePage === item.label ? "page" : undefined}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {item.label}
+                  </button>
+                  {item.label === "Posting Pages" && (
+                    <div>
+                      <button
+                        type="button"
+                        aria-expanded={bingoMenuOpen}
+                        aria-controls="bingo-navigation"
+                        className={`flex w-full items-center gap-2 rounded-lg border px-3 py-2 text-left text-sm font-bold transition ${
+                          activePage === "Bingo" ? "border-moss bg-[#edf8ed] text-moss" : "border-transparent hover:border-[#d9dedb] hover:bg-sand"
+                        }`}
+                        onClick={() => setBingoMenuOpen((open) => !open)}
+                      >
+                        <Dices aria-hidden="true" className="h-4 w-4" />
+                        Bingo
+                        <ChevronDown aria-hidden="true" className={`ml-auto h-4 w-4 transition-transform ${bingoMenuOpen ? "rotate-180" : ""}`} />
+                      </button>
+                      <div id="bingo-navigation" hidden={!bingoMenuOpen} className="ml-5 mt-2 space-y-1 border-l border-[#d9dedb] pl-3">
+                        <button
+                          type="button"
+                          aria-current={activePage === "Bingo" ? "page" : undefined}
+                          className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-bold transition ${
+                            activePage === "Bingo" ? "bg-[#edf8ed] text-moss" : "hover:bg-sand"
+                          }`}
+                          onClick={() => setActivePage("Bingo")}
+                        >
+                          <Dices aria-hidden="true" className="h-4 w-4" />
+                          Bingo Console
+                        </button>
+                        <a href="https://www.opebingo.com/dashboard" target="_blank" rel="noopener noreferrer" aria-label="Bingo Dashboard (opens in a new tab)" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition hover:bg-sand">
+                          <LayoutDashboard aria-hidden="true" className="h-4 w-4" />
+                          Bingo Dashboard
+                          <ExternalLink aria-hidden="true" className="ml-auto h-3 w-3" />
+                        </a>
+                        <a href="https://www.opebingo.com/host" target="_blank" rel="noopener noreferrer" aria-label="Host Console (opens in a new tab)" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition hover:bg-sand">
+                          <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                          Host Console
+                        </a>
+                        <a href="https://www.opebingo.com/display" target="_blank" rel="noopener noreferrer" aria-label="TV Display (opens in a new tab)" className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-bold transition hover:bg-sand">
+                          <Monitor aria-hidden="true" className="h-4 w-4" />
+                          TV Display
+                          <ExternalLink aria-hidden="true" className="ml-auto h-3 w-3" />
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </Fragment>
               );
             })}
           </nav>
@@ -756,6 +808,8 @@ export function MarketingRoadmapApp({ initialState }: { initialState: DashboardS
           {activePage === "Yearly Marketing Plan" && <YearlyMarketingPlanView plan={state.yearlyPlan} />}
 
           {activePage === "Posting Pages" && <PostingPagesView destinations={state.postingDestinations} onUpdate={updatePostingDestination} />}
+
+          {activePage === "Bingo" && <BingoWorkspace />}
 
           {activePage === "Ideas" && <IdeasView ideas={state.ideas} onSchedule={setIdeaToSchedule} />}
 

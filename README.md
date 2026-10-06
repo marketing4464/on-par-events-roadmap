@@ -12,6 +12,7 @@ Production-oriented Next.js dashboard for planning On Par Entertainment marketin
 - Master calendar with month, week, and agenda views
 - Drag-to-reschedule with conflict warnings
 - Dashboard widgets
+- Bingo dropdown with an embedded OPE Bingo host console and quick links to the dashboard, host, and TV display
 - Recommendation inbox
 - Manual staff recommendation form
 - Approval, denial, archive, merge, and research-request actions

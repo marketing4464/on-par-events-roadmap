@@ -4,6 +4,8 @@ dist
 .vercel
 .next
 tsconfig.tsbuildinfo
+.playwright-cli/
+output/playwright/
 .env
 .env.local
 .env.*.local
